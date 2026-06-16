@@ -1,0 +1,44 @@
+"""可插拔接口:本地↔API、Qdrant↔其他库切换时,只换实现,不动核心逻辑。"""
+from abc import ABC, abstractmethod
+from rag.models import Chunk, RetrievedChunk
+
+
+class Embedder(ABC):
+    """把文本转成向量。"""
+
+    @abstractmethod
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        """批量把文本转成向量,返回顺序与输入一致。"""
+
+    @abstractmethod
+    def embed_one(self, text: str) -> list[float]:
+        """把单条文本转成向量。"""
+
+
+class VectorStore(ABC):
+    """向量存储与检索。"""
+
+    @abstractmethod
+    def ensure_collection(self, vector_size: int) -> None:
+        """确保集合存在(不存在则创建)。"""
+
+    @abstractmethod
+    def upsert(self, chunks: list[Chunk], vectors: list[list[float]]) -> None:
+        """写入块及其向量。"""
+
+    @abstractmethod
+    def search(self, query_vector: list[float], top_k: int,
+               library: str | None = None) -> list[RetrievedChunk]:
+        """按向量相似度检索,可选按 library 过滤。"""
+
+    @abstractmethod
+    def count(self) -> int:
+        """返回集合内向量条数。"""
+
+
+class LLM(ABC):
+    """大语言模型:根据 prompt 生成文本。"""
+
+    @abstractmethod
+    def generate(self, prompt: str) -> str:
+        """生成回答。"""
