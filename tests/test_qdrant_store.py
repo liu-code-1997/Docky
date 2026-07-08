@@ -43,3 +43,21 @@ def test_search_can_filter_by_library():
     results = store.search([1.0, 1.0, 0.0], top_k=5, library="qdrant")
     assert len(results) == 1
     assert results[0].chunk.library == "qdrant"
+
+
+def test_list_libraries_returns_unique_sorted_names():
+    store = QdrantStore(location=":memory:", collection_name="test")
+    store.ensure_collection(vector_size=3)
+    # 3 块:fastapi 两块、qdrant 一块
+    chunks = [_chunk(0, "qdrant"), _chunk(1, "fastapi"), _chunk(2, "fastapi")]
+    vectors = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    store.upsert(chunks, vectors)
+
+    libs = store.list_libraries()
+    assert libs == ["fastapi", "qdrant"]  # 去重 + 排序
+
+
+def test_list_libraries_empty_when_no_data():
+    store = QdrantStore(location=":memory:", collection_name="test")
+    store.ensure_collection(vector_size=3)
+    assert store.list_libraries() == []

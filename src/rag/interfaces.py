@@ -35,6 +35,10 @@ class VectorStore(ABC):
     def count(self) -> int:
         """返回集合内向量条数。"""
 
+    @abstractmethod
+    def list_libraries(self) -> list[str]:
+        """返回库中所有不同的 library 名(去重、排序)。"""
+
 
 class LLM(ABC):
     """大语言模型:根据 prompt 生成文本。"""

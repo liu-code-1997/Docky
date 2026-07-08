@@ -70,3 +70,23 @@ class QdrantStore(VectorStore):
 
     def count(self) -> int:
         return self.client.count(collection_name=self.collection_name).count
+
+    def list_libraries(self) -> list[str]:
+        # scroll 分页遍历所有点,只取 payload 里的 library 字段(不要向量,省带宽)。
+        libraries: set[str] = set()
+        offset = None
+        while True:
+            points, offset = self.client.scroll(
+                collection_name=self.collection_name,
+                with_payload=["library"],
+                with_vectors=False,
+                limit=256,
+                offset=offset,
+            )
+            for p in points:
+                lib = (p.payload or {}).get("library")
+                if lib:
+                    libraries.add(lib)
+            if offset is None:  # 没有下一页了
+                break
+        return sorted(libraries)
