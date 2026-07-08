@@ -21,3 +21,11 @@ class Answer(BaseModel):
     """问答的最终产物:答案文本 + 去重后的来源列表。"""
     text: str                          # LLM 生成的答案
     sources: list[str] = []            # 去重后的来源 source(无资料时为空)
+
+
+class EvalSample(BaseModel):
+    """评估集的一条样本(M4)。"""
+    question: str
+    expected_source: str | None = None       # 期望命中的来源文件;无答案样本为 None
+    expected_keywords: list[str] = []         # 方法A:答案里应出现的关键词
+    expected_answer: str = ""                 # 方法B/C:标准答案(A 用不到)

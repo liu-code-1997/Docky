@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # 检索参数(M2 使用)
     top_k: int = 4
 
+    # 评估参数(M4 使用):生成层评分方法 keyword | llm_judge | semantic
+    eval_scorer: str = "keyword"
+
 
 def get_settings() -> Settings:
     """返回一个 Settings 实例。集中在此,方便测试时替换。"""

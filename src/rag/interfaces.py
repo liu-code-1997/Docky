@@ -1,6 +1,6 @@
 """可插拔接口:本地↔API、Qdrant↔其他库切换时,只换实现,不动核心逻辑。"""
 from abc import ABC, abstractmethod
-from rag.models import Chunk, RetrievedChunk
+from rag.models import Chunk, RetrievedChunk, EvalSample
 
 
 class Embedder(ABC):
@@ -46,3 +46,11 @@ class LLM(ABC):
     @abstractmethod
     def generate(self, prompt: str) -> str:
         """生成回答。"""
+
+
+class AnswerScorer(ABC):
+    """给一条答案打分(M4 评估)。返回 0–1,越高越接近期望答案。"""
+
+    @abstractmethod
+    def score(self, answer_text: str, sample: EvalSample) -> float:
+        """对 answer_text 相对 sample 的期望打分。"""

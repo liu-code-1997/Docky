@@ -1,0 +1,62 @@
+[
+  {
+    "question": "FastAPI 里路径参数怎么声明?",
+    "expected_source": "fastapi/tutorial-path-params.md",
+    "expected_keywords": ["path parameter", "item_id"],
+    "expected_answer": "在路径中用花括号写变量名(如 /items/{item_id}),该值会作为同名参数传给函数。"
+  },
+  {
+    "question": "路径参数可以限定类型吗?比如只能是整数",
+    "expected_source": "fastapi/tutorial-path-params.md",
+    "expected_keywords": ["type", "int", "path parameter"],
+    "expected_answer": "可以,用 Python 类型注解声明,如 item_id: int,FastAPI 会做校验和转换。"
+  },
+  {
+    "question": "查询参数是什么?怎么用?",
+    "expected_source": "fastapi/tutorial-query-params.md",
+    "expected_keywords": ["query parameter"],
+    "expected_answer": "不在路径里的函数参数会被解释为查询参数,即 URL 中 ? 之后的键值对。"
+  },
+  {
+    "question": "查询参数怎么设默认值让它变成可选的?",
+    "expected_source": "fastapi/tutorial-query-params.md",
+    "expected_keywords": ["default", "query parameter"],
+    "expected_answer": "给参数一个默认值即可,例如 skip: int = 0,这样查询参数就是可选的。"
+  },
+  {
+    "question": "怎么接收请求体(request body)?",
+    "expected_source": "fastapi/tutorial-body.md",
+    "expected_keywords": ["request body", "Pydantic"],
+    "expected_answer": "定义一个继承 Pydantic BaseModel 的类作为参数类型,FastAPI 会把请求体解析成该模型。"
+  },
+  {
+    "question": "请求体用什么库来定义数据模型?",
+    "expected_source": "fastapi/tutorial-body.md",
+    "expected_keywords": ["Pydantic", "BaseModel"],
+    "expected_answer": "用 Pydantic,声明一个继承 BaseModel 的类。"
+  },
+  {
+    "question": "怎么启动一个最简单的 FastAPI 应用?",
+    "expected_source": "fastapi/tutorial-first-steps.md",
+    "expected_keywords": ["uvicorn", "app"],
+    "expected_answer": "创建 FastAPI 实例 app,用装饰器定义路径操作,再用 uvicorn 运行,如 fastapi dev / uvicorn main:app。"
+  },
+  {
+    "question": "FastAPI 是什么?有什么特点?",
+    "expected_source": "fastapi/index.md",
+    "expected_keywords": ["FastAPI", "Python"],
+    "expected_answer": "FastAPI 是一个现代、高性能的 Python Web 框架,基于标准类型注解构建 API。"
+  },
+  {
+    "question": "怎么用 Python 连接 MySQL 数据库?",
+    "expected_source": null,
+    "expected_keywords": [],
+    "expected_answer": ""
+  },
+  {
+    "question": "今天北京的天气怎么样?",
+    "expected_source": null,
+    "expected_keywords": [],
+    "expected_answer": ""
+  }
+]
