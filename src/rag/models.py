@@ -15,3 +15,9 @@ class RetrievedChunk(BaseModel):
     """检索返回的块,附带相似度分数。"""
     chunk: Chunk
     score: float
+
+
+class Answer(BaseModel):
+    """问答的最终产物:答案文本 + 去重后的来源列表。"""
+    text: str                          # LLM 生成的答案
+    sources: list[str] = []            # 去重后的来源 source(无资料时为空)
