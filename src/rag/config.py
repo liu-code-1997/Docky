@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     # 评估参数(M4 使用):生成层评分方法 keyword | llm_judge | semantic
     eval_scorer: str = "keyword"
 
+    # 生成温度:日常问答略高更自然;评估恒为 0,同 prompt 恒定输出、结果可复现
+    llm_temperature: float = 0.7
+    eval_temperature: float = 0.0
+
 
 def get_settings() -> Settings:
     """返回一个 Settings 实例。集中在此,方便测试时替换。"""

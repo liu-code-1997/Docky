@@ -14,6 +14,9 @@ def test_settings_have_sensible_defaults():
     assert s.top_k == 4
     # 评估默认用关键词评分(M4)
     assert s.eval_scorer == "keyword"
+    # 温度:日常问答略高更自然,评估恒为 0 保证可复现
+    assert s.llm_temperature == 0.7
+    assert s.eval_temperature == 0.0
 
 
 def test_settings_can_be_overridden_by_env(monkeypatch):
@@ -26,3 +29,11 @@ def test_eval_scorer_can_be_overridden_by_env(monkeypatch):
     monkeypatch.setenv("EVAL_SCORER", "semantic")
     s = Settings()
     assert s.eval_scorer == "semantic"
+
+
+def test_temperatures_can_be_overridden_by_env(monkeypatch):
+    monkeypatch.setenv("LLM_TEMPERATURE", "0.2")
+    monkeypatch.setenv("EVAL_TEMPERATURE", "0.5")
+    s = Settings()
+    assert s.llm_temperature == 0.2
+    assert s.eval_temperature == 0.5

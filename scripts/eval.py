@@ -34,7 +34,9 @@ def main() -> None:
     scorer_name = args.scorer or settings.eval_scorer
 
     embedder = OllamaEmbedder(settings.ollama_base_url, settings.embedding_model)
-    llm = OllamaLLM(settings.ollama_base_url, settings.llm_model)
+    # 评估恒用 eval_temperature(默认 0):被评的答案生成 + llm_judge 裁判都可复现
+    llm = OllamaLLM(settings.ollama_base_url, settings.llm_model,
+                    temperature=settings.eval_temperature)
     store = QdrantStore(collection_name=settings.collection_name,
                         url=settings.qdrant_url)
     scorer = get_scorer(scorer_name, llm=llm, embedder=embedder)

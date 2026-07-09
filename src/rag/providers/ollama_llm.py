@@ -8,15 +8,22 @@ from rag.interfaces import LLM
 
 
 class OllamaLLM(LLM):
-    def __init__(self, base_url: str, model: str, timeout: float = 120.0):
+    def __init__(self, base_url: str, model: str, timeout: float = 120.0,
+                 temperature: float = 0.0):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
+        self.temperature = temperature  # 默认 0:同 prompt 恒定输出,评估可复现
 
     def generate(self, prompt: str) -> str:
         resp = httpx.post(
             f"{self.base_url}/api/generate",
-            json={"model": self.model, "prompt": prompt, "stream": False},
+            json={
+                "model": self.model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": self.temperature},
+            },
             timeout=self.timeout,
         )
         resp.raise_for_status()

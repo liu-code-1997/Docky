@@ -25,7 +25,8 @@ def main() -> None:
 
     # 装配真实 provider —— 选用哪个实现的决定只发生在这里
     embedder = OllamaEmbedder(settings.ollama_base_url, settings.embedding_model)
-    llm = OllamaLLM(settings.ollama_base_url, settings.llm_model)
+    llm = OllamaLLM(settings.ollama_base_url, settings.llm_model,
+                    temperature=settings.llm_temperature)
     store = QdrantStore(collection_name=settings.collection_name,
                         url=settings.qdrant_url)
     pipe = RagPipeline(embedder, store, llm, top_k=settings.top_k)
