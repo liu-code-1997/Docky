@@ -27,7 +27,7 @@ class LibrariesResponse(BaseModel):
 
 
 def create_app(pipeline, store) -> FastAPI:
-    app = FastAPI(title="rag-docs", description="技术文档 RAG 问答服务")
+    app = FastAPI(title="Docky", description="Docky · 面向学习的技术文档 RAG 问答小助手")
 
     @app.post("/ask", response_model=Answer)
     def ask(req: AskRequest) -> Answer:

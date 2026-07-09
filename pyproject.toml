@@ -1,5 +1,5 @@
 [project]
-name = "rag-docs"
+name = "docky"
 version = "0.1.0"
 description = "A learning-oriented RAG system for technical documentation"
 requires-python = ">=3.11"
