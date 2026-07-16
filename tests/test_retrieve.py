@@ -73,3 +73,23 @@ def test_retrieve_without_rewriter_is_unchanged():
     # 不传 rewriter,行为与之前一致(baseline)
     results = retrieve("tell me about docs", FakeEmbedder(), store, top_k=1)
     assert results[0].chunk.library == "qdrant"
+
+
+class _ReverseReranker:
+    """把候选顺序反转,用于验证 rerank 确实被调用且作用于结果。"""
+    def __init__(self):
+        self.got_n = None
+
+    def rerank(self, question, candidates, top_k):
+        self.got_n = len(candidates)
+        return list(reversed(candidates))[:top_k]
+
+
+def test_retrieve_applies_reranker_and_recalls_more_candidates():
+    store = _seed_store()  # 库里 2 条:fastapi 向量[1,0,0]、qdrant 向量[0,1,0]
+    rr = _ReverseReranker()
+    # top_k=1,factor=5 -> 先召回 min(5, 全部)=2 个候选,重排(反转)后取1
+    results = retrieve("what is fastapi", FakeEmbedder(), store, top_k=1,
+                       reranker=rr, rerank_factor=5)
+    assert rr.got_n == 2          # 确实召回了多于 top_k 的候选
+    assert len(results) == 1      # 最终截到 top_k

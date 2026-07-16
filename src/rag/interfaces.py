@@ -62,3 +62,12 @@ class QueryRewriter(ABC):
     @abstractmethod
     def rewrite(self, question: str) -> str:
         """返回用于检索的查询文本(通常含原问题 + 扩展词)。"""
+
+
+class Reranker(ABC):
+    """检索后重排(M5 ③):对候选块按与问题的相关性重新排序,取前 top_k。"""
+
+    @abstractmethod
+    def rerank(self, question: str, candidates: list[RetrievedChunk],
+               top_k: int) -> list[RetrievedChunk]:
+        """返回重排后的前 top_k 个候选。"""

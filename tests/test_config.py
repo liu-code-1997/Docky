@@ -14,8 +14,11 @@ def test_settings_have_sensible_defaults():
     assert s.top_k == 4
     # M5:切分策略默认 char(baseline),可切 markdown
     assert s.chunk_strategy == "char"
-    # M5②:查询改写默认关(baseline)
-    assert s.query_rewrite is False
+    # M5②:查询改写经消融验证最有效,默认开启
+    assert s.query_rewrite is True
+    # M5③:重排默认关,召回倍数默认 5
+    assert s.rerank is False
+    assert s.rerank_factor == 5
     # 评估默认用关键词评分(M4)
     assert s.eval_scorer == "keyword"
     # 温度:日常问答略高更自然,评估恒为 0 保证可复现

@@ -23,8 +23,13 @@ class Settings(BaseSettings):
     # 切分策略(M5 ①):char(按字符,baseline) | markdown(按标题+噪声过滤)
     chunk_strategy: str = "char"
 
-    # 查询改写(M5 ②):开启后检索前用 LLM 扩展英文术语,缓解跨语言检索
-    query_rewrite: bool = False
+    # 查询改写(M5 ②):检索前用 LLM 扩展英文术语,缓解跨语言检索。
+    # 经消融验证是最有效手段(hit@4 39%→94%),故默认开启。
+    query_rewrite: bool = True
+
+    # 重排(M5 ③):开启后先召回 top_k×rerank_factor 候选,用 LLM 重排取前 top_k
+    rerank: bool = False
+    rerank_factor: int = 5
 
     # 检索参数(M2 使用)
     top_k: int = 4
