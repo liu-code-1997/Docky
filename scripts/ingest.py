@@ -30,8 +30,9 @@ def main() -> None:
         chunk_size=settings.chunk_size,
         overlap=settings.chunk_overlap,
         vector_size=vector_size,
+        strategy=settings.chunk_strategy,
     )
-    print(f"✅ 已入库 {n} 个块,Qdrant 当前共 {store.count()} 条。")
+    print(f"✅ 已入库 {n} 个块(切分策略={settings.chunk_strategy}),Qdrant 当前共 {store.count()} 条。")
 
 
 if __name__ == "__main__":

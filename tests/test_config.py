@@ -12,6 +12,8 @@ def test_settings_have_sensible_defaults():
     assert s.chunk_size == 800
     assert s.chunk_overlap == 150
     assert s.top_k == 4
+    # M5:切分策略默认 char(baseline),可切 markdown
+    assert s.chunk_strategy == "char"
     # 评估默认用关键词评分(M4)
     assert s.eval_scorer == "keyword"
     # 温度:日常问答略高更自然,评估恒为 0 保证可复现

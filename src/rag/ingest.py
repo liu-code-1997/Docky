@@ -5,9 +5,11 @@ from rag.loader import load_chunks_from_dir
 
 
 def ingest_directory(docs_dir: Path, embedder: Embedder, store: VectorStore,
-                     chunk_size: int, overlap: int, vector_size: int) -> int:
+                     chunk_size: int, overlap: int, vector_size: int,
+                     strategy: str = "char") -> int:
     """把 docs_dir 下的 Markdown 灌入向量库,返回入库的块数。"""
-    chunks = load_chunks_from_dir(docs_dir, chunk_size=chunk_size, overlap=overlap)
+    chunks = load_chunks_from_dir(docs_dir, chunk_size=chunk_size, overlap=overlap,
+                                  strategy=strategy)
     if not chunks:
         return 0
 

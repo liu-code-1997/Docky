@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     chunk_size: int = 800
     chunk_overlap: int = 150
 
+    # 切分策略(M5 ①):char(按字符,baseline) | markdown(按标题+噪声过滤)
+    chunk_strategy: str = "char"
+
     # 检索参数(M2 使用)
     top_k: int = 4
 

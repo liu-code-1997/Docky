@@ -5,10 +5,11 @@
 """
 from pathlib import Path
 from rag.models import Chunk
-from rag.chunking import chunk_text
+from rag.chunking import chunk_text, chunk_markdown
 
 
-def load_chunks_from_dir(docs_dir: Path, chunk_size: int, overlap: int) -> list[Chunk]:
+def load_chunks_from_dir(docs_dir: Path, chunk_size: int, overlap: int,
+                         strategy: str = "char") -> list[Chunk]:
     docs_dir = Path(docs_dir)
     chunks: list[Chunk] = []
 
@@ -19,7 +20,10 @@ def load_chunks_from_dir(docs_dir: Path, chunk_size: int, overlap: int) -> list[
         source = rel.as_posix()
 
         text = md_path.read_text(encoding="utf-8")
-        pieces = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
+        if strategy == "markdown":
+            pieces = chunk_markdown(text, chunk_size=chunk_size, overlap=overlap)
+        else:
+            pieces = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
         for i, piece in enumerate(pieces):
             chunks.append(Chunk(
                 id=f"{source}::{i}",

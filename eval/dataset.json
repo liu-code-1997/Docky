@@ -12,6 +12,24 @@
     "expected_answer": "可以,用 Python 类型注解声明,如 item_id: int,FastAPI 会做校验和转换。"
   },
   {
+    "question": "路径参数传了不合法的类型会怎样?",
+    "expected_source": "fastapi/tutorial-path-params.md",
+    "expected_keywords": ["validation", "error"],
+    "expected_answer": "FastAPI 基于类型做数据校验,类型不匹配会返回清晰的 HTTP 错误。"
+  },
+  {
+    "question": "怎么限定路径参数只能取几个预设值之一?",
+    "expected_source": "fastapi/tutorial-path-params.md",
+    "expected_keywords": ["Enum", "predefined"],
+    "expected_answer": "定义一个继承 str 和 Enum 的类,把它作为路径参数的类型,即可限定预设值。"
+  },
+  {
+    "question": "路径参数里怎么包含一个文件路径?",
+    "expected_source": "fastapi/tutorial-path-params.md",
+    "expected_keywords": ["path", "convertor"],
+    "expected_answer": "用 Starlette 的 path 转换器,声明如 /files/{file_path:path}。"
+  },
+  {
     "question": "查询参数是什么?怎么用?",
     "expected_source": "fastapi/tutorial-query-params.md",
     "expected_keywords": ["query parameter"],
@@ -22,6 +40,18 @@
     "expected_source": "fastapi/tutorial-query-params.md",
     "expected_keywords": ["default", "query parameter"],
     "expected_answer": "给参数一个默认值即可,例如 skip: int = 0,这样查询参数就是可选的。"
+  },
+  {
+    "question": "怎么把一个查询参数声明为必填?",
+    "expected_source": "fastapi/tutorial-query-params.md",
+    "expected_keywords": ["required", "query"],
+    "expected_answer": "不给默认值即为必填;若要可选又无默认,用 Optional 并设为 None。"
+  },
+  {
+    "question": "查询参数能自动转换布尔值吗?",
+    "expected_source": "fastapi/tutorial-query-params.md",
+    "expected_keywords": ["bool", "conversion"],
+    "expected_answer": "能,声明为 bool 类型后,1/true/on/yes 等都会被转换为 True。"
   },
   {
     "question": "怎么接收请求体(request body)?",
@@ -36,10 +66,40 @@
     "expected_answer": "用 Pydantic,声明一个继承 BaseModel 的类。"
   },
   {
+    "question": "可以同时接收路径参数和请求体吗?",
+    "expected_source": "fastapi/tutorial-body.md",
+    "expected_keywords": ["path", "body"],
+    "expected_answer": "可以,FastAPI 会自动识别:路径里声明的作路径参数,Pydantic 模型作请求体。"
+  },
+  {
+    "question": "怎么在函数里访问请求体模型的字段?",
+    "expected_source": "fastapi/tutorial-body.md",
+    "expected_keywords": ["model", "attribute"],
+    "expected_answer": "请求体参数是模型实例,直接用点号访问其属性即可,如 item.name。"
+  },
+  {
     "question": "怎么启动一个最简单的 FastAPI 应用?",
     "expected_source": "fastapi/tutorial-first-steps.md",
     "expected_keywords": ["uvicorn", "app"],
-    "expected_answer": "创建 FastAPI 实例 app,用装饰器定义路径操作,再用 uvicorn 运行,如 fastapi dev / uvicorn main:app。"
+    "expected_answer": "创建 FastAPI 实例 app,用装饰器定义路径操作,再用 fastapi dev / uvicorn 运行。"
+  },
+  {
+    "question": "path operation 是什么意思?",
+    "expected_source": "fastapi/tutorial-first-steps.md",
+    "expected_keywords": ["path operation", "decorator"],
+    "expected_answer": "path operation 指某个路径 + HTTP 方法的组合,用 @app.get 等装饰器声明。"
+  },
+  {
+    "question": "OpenAPI 在 FastAPI 里起什么作用?",
+    "expected_source": "fastapi/tutorial-first-steps.md",
+    "expected_keywords": ["OpenAPI", "schema"],
+    "expected_answer": "FastAPI 基于 OpenAPI 标准自动生成 API 的 schema 和交互式文档。"
+  },
+  {
+    "question": "怎么打开交互式 API 文档界面?",
+    "expected_source": "fastapi/tutorial-first-steps.md",
+    "expected_keywords": ["docs", "Swagger"],
+    "expected_answer": "启动应用后访问 /docs 即可看到 Swagger UI 交互式文档。"
   },
   {
     "question": "FastAPI 是什么?有什么特点?",
@@ -55,6 +115,18 @@
   },
   {
     "question": "今天北京的天气怎么样?",
+    "expected_source": null,
+    "expected_keywords": [],
+    "expected_answer": ""
+  },
+  {
+    "question": "怎么用 React 写一个前端组件?",
+    "expected_source": null,
+    "expected_keywords": [],
+    "expected_answer": ""
+  },
+  {
+    "question": "Django 和 Flask 哪个更好?",
     "expected_source": null,
     "expected_keywords": [],
     "expected_answer": ""
