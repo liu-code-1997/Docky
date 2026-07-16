@@ -20,6 +20,7 @@ from rag.retrieve import retrieve
 from rag.generate import answer as generate_answer
 from rag.scoring import get_scorer
 from rag.evaluate import evaluate_sample, aggregate
+from rag.query_rewrite import LlmQueryRewriter
 from rag.models import EvalSample
 
 
@@ -28,6 +29,9 @@ def main() -> None:
     parser.add_argument("--scorer", default=None,
                         help="覆盖 EVAL_SCORER:keyword | llm_judge | semantic")
     parser.add_argument("--dataset", default="eval/dataset.json")
+    parser.add_argument("--query-rewrite", dest="query_rewrite",
+                        action=argparse.BooleanOptionalAction, default=None,
+                        help="覆盖 QUERY_REWRITE:开启检索前查询改写(M5②)")
     args = parser.parse_args()
 
     settings = get_settings()
@@ -41,10 +45,15 @@ def main() -> None:
                         url=settings.qdrant_url)
     scorer = get_scorer(scorer_name, llm=llm, embedder=embedder)
 
+    # M5②:查询改写(命令行 --query-rewrite 可覆盖 config)
+    use_rewrite = args.query_rewrite if args.query_rewrite is not None else settings.query_rewrite
+    rewriter = LlmQueryRewriter(llm) if use_rewrite else None
+
     data = json.loads(Path(args.dataset).read_text(encoding="utf-8"))
     samples = [EvalSample(**d) for d in data]
 
-    print(f"评分方法: {scorer_name} | top_k={settings.top_k} | {len(samples)} 条样本\n")
+    print(f"评分方法: {scorer_name} | top_k={settings.top_k} | "
+          f"query_rewrite={use_rewrite} | {len(samples)} 条样本\n")
     header = f"{'hit':>4} {'mrr':>5} {'gen':>5} {'拒答':>4}  问题"
     print(header)
     print("-" * 72)
@@ -52,7 +61,8 @@ def main() -> None:
     rows = []
     for s in samples:
         retrieved = retrieve(s.question, embedder, store,
-                             top_k=settings.top_k, library=None)
+                             top_k=settings.top_k, library=None,
+                             rewriter=rewriter)
         ans = generate_answer(s.question, retrieved, llm)
         r = evaluate_sample(s, retrieved, ans, scorer)
         rows.append(r)

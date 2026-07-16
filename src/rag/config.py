@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # 切分策略(M5 ①):char(按字符,baseline) | markdown(按标题+噪声过滤)
     chunk_strategy: str = "char"
 
+    # 查询改写(M5 ②):开启后检索前用 LLM 扩展英文术语,缓解跨语言检索
+    query_rewrite: bool = False
+
     # 检索参数(M2 使用)
     top_k: int = 4
 

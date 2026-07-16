@@ -54,3 +54,11 @@ class AnswerScorer(ABC):
     @abstractmethod
     def score(self, answer_text: str, sample: EvalSample) -> float:
         """对 answer_text 相对 sample 的期望打分。"""
+
+
+class QueryRewriter(ABC):
+    """检索前改写查询(M5 ②):如把中文问题扩展出英文术语,缓解跨语言检索。"""
+
+    @abstractmethod
+    def rewrite(self, question: str) -> str:
+        """返回用于检索的查询文本(通常含原问题 + 扩展词)。"""

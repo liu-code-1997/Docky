@@ -45,3 +45,31 @@ def test_retrieve_passes_library_filter_through():
                        top_k=5, library="qdrant")
     assert len(results) == 1
     assert results[0].chunk.library == "qdrant"
+
+
+class _FakeRewriter:
+    """把任何问题改写成含 'fastapi' 的查询。"""
+    def __init__(self):
+        self.called_with = None
+
+    def rewrite(self, question: str) -> str:
+        self.called_with = question
+        return "fastapi " + question
+
+
+def test_retrieve_uses_rewriter_when_provided():
+    store = _seed_store()
+    rw = _FakeRewriter()
+    # 原问题 "tell me about docs" 本会偏向第二个向量(qdrant);
+    # 改写后含 fastapi -> 偏向 fastapi 块。证明改写生效。
+    results = retrieve("tell me about docs", FakeEmbedder(), store,
+                       top_k=1, rewriter=rw)
+    assert rw.called_with == "tell me about docs"
+    assert results[0].chunk.library == "fastapi"
+
+
+def test_retrieve_without_rewriter_is_unchanged():
+    store = _seed_store()
+    # 不传 rewriter,行为与之前一致(baseline)
+    results = retrieve("tell me about docs", FakeEmbedder(), store, top_k=1)
+    assert results[0].chunk.library == "qdrant"

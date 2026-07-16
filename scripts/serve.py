@@ -15,6 +15,7 @@ from rag.providers.ollama_embedder import OllamaEmbedder
 from rag.providers.ollama_llm import OllamaLLM
 from rag.providers.qdrant_store import QdrantStore
 from rag.pipeline import RagPipeline
+from rag.query_rewrite import LlmQueryRewriter
 from rag.api import create_app
 
 
@@ -26,7 +27,9 @@ def build_app():
                     temperature=settings.llm_temperature)
     store = QdrantStore(collection_name=settings.collection_name,
                         url=settings.qdrant_url)
-    pipeline = RagPipeline(embedder, store, llm, top_k=settings.top_k)
+    rewriter = LlmQueryRewriter(llm) if settings.query_rewrite else None
+    pipeline = RagPipeline(embedder, store, llm, top_k=settings.top_k,
+                           rewriter=rewriter)
     return create_app(pipeline, store)
 
 

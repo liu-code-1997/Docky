@@ -48,3 +48,16 @@ def test_ask_forwards_library_filter():
     pipe = RagPipeline(FakeEmbedder(), _store(), FakeLLM(), top_k=5)
     ans = pipe.ask("what is fastapi", library="qdrant")
     assert ans.sources == ["qdrant/b.md"]  # 被 library 过滤限定
+
+
+class _FakeRewriter:
+    def rewrite(self, question: str) -> str:
+        return "fastapi " + question
+
+
+def test_ask_uses_rewriter_when_injected():
+    # 原问题偏向 qdrant;注入改写器加上 fastapi -> 命中 fastapi 块
+    pipe = RagPipeline(FakeEmbedder(), _store(), FakeLLM(), top_k=1,
+                       rewriter=_FakeRewriter())
+    ans = pipe.ask("tell me about docs")
+    assert ans.sources == ["fastapi/a.md"]
