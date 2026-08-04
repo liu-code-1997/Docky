@@ -11,6 +11,16 @@
 **核心不变量**:现有 `RagPipeline`(M2-M5)完全保留、不动一行,与 agent 并存;
 `retrieve` 检索链路(query_rewrite / rerank / markdown 切分)原样复用,被包成 agent 的一个工具。
 
+## 单项目、进程内调用(不拆服务)
+
+RAG 与 agent 在**同一个项目、同一个进程**里:`search_docs` 工具**直接函数调用**
+现有 `retrieve()`,不经过 HTTP。RAG 是 agent 的一项能力(工具),不是独立系统。
+
+- 对外仍是**一个 FastAPI 应用**:现有单轮 `/ask`(RagPipeline)保留,agent 另加
+  `/agent/ask`,两端点共用底层 `retrieve`。
+- **不拆两个服务**——独立伸缩、多消费方复用、跨团队/技术栈边界,这些拆分动因当前一个都不占;
+  拆分只会多两套部署/配置/序列化/跨服务调试,学不到 agent 核心。真需要拆是以后的事。
+
 ## 单轮 RAG vs Agentic RAG
 
 ```
