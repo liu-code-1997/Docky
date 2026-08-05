@@ -19,6 +19,13 @@ def test_settings_have_sensible_defaults():
     # M5③:重排默认关,召回倍数默认 5
     assert s.rerank is False
     assert s.rerank_factor == 5
+    # M6:agent 的对话 LLM 配置(默认走本地 Ollama 的 /v1 兼容端点)
+    assert s.chat_provider == "openai_compat"
+    assert s.chat_base_url == "http://localhost:11434/v1"
+    assert s.chat_model == "qwen2.5:7b"
+    assert s.chat_api_key_env == "OPENAI_API_KEY"
+    assert s.claude_model == "claude-opus-5"
+    assert s.agent_max_steps == 5
     # 评估默认用关键词评分(M4)
     assert s.eval_scorer == "keyword"
     # 温度:日常问答略高更自然,评估恒为 0 保证可复现

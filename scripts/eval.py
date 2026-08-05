@@ -22,6 +22,8 @@ from rag.scoring import get_scorer
 from rag.evaluate import evaluate_sample, aggregate
 from rag.query_rewrite import LlmQueryRewriter
 from rag.rerank import LlmReranker
+from rag.agent import RagAgent
+from rag.providers.chat_factory import build_chat_llm
 from rag.models import EvalSample
 
 
@@ -36,6 +38,8 @@ def main() -> None:
     parser.add_argument("--rerank", dest="rerank",
                         action=argparse.BooleanOptionalAction, default=None,
                         help="覆盖 RERANK:开启检索后重排(M5③)")
+    parser.add_argument("--agent", action="store_true",
+                        help="用 M6 agent(自主检索循环)而非单轮 RAG")
     args = parser.parse_args()
 
     settings = get_settings()
@@ -57,33 +61,50 @@ def main() -> None:
     use_rerank = args.rerank if args.rerank is not None else settings.rerank
     reranker = LlmReranker(llm) if use_rerank else None
 
+    # M6:agent 模式 —— 用自主检索循环替代单轮 RAG
+    agent = None
+    if args.agent:
+        def retriever(query, library=None, top_k=settings.top_k):
+            return retrieve(query, embedder, store, top_k=top_k, library=library,
+                            rewriter=rewriter, reranker=reranker,
+                            rerank_factor=settings.rerank_factor)
+        agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
+                         top_k=settings.top_k, max_steps=settings.agent_max_steps)
+
     data = json.loads(Path(args.dataset).read_text(encoding="utf-8"))
     samples = [EvalSample(**d) for d in data]
 
-    print(f"评分方法: {scorer_name} | top_k={settings.top_k} | "
-          f"query_rewrite={use_rewrite} | rerank={use_rerank} | {len(samples)} 条样本\n")
-    header = f"{'hit':>4} {'mrr':>5} {'gen':>5} {'拒答':>4}  问题"
-    print(header)
-    print("-" * 72)
+    mode = "agent" if args.agent else "single-turn"
+    print(f"模式: {mode} | 评分: {scorer_name} | top_k={settings.top_k} | "
+          f"query_rewrite={use_rewrite} | rerank={use_rerank} | {len(samples)} 条\n")
 
     rows = []
     for s in samples:
-        retrieved = retrieve(s.question, embedder, store,
-                             top_k=settings.top_k, library=None,
-                             rewriter=rewriter, reranker=reranker,
-                             rerank_factor=settings.rerank_factor)
-        ans = generate_answer(s.question, retrieved, llm)
-        r = evaluate_sample(s, retrieved, ans, scorer)
-        rows.append(r)
-        print(f"{'✓' if r['hit'] else '✗':>4} "
-              f"{r['mrr']:>5.2f} {r['gen_score']:>5.2f} "
-              f"{'是' if r['refusal'] else '否':>4}  {s.question}")
+        if agent is not None:
+            # agent 内部自主检索;评估看生成分与拒答(检索命中在循环内,不单独计)
+            ans = agent.ask(s.question, library=None)
+            gen = scorer.score(ans.text, s)
+            refusal = "无法回答" in ans.text
+            rows.append({"hit": False, "mrr": 0.0, "gen_score": gen, "refusal": refusal})
+            print(f"gen={gen:>4.2f} {'拒答' if refusal else '答  '}  {s.question}")
+        else:
+            retrieved = retrieve(s.question, embedder, store,
+                                 top_k=settings.top_k, library=None,
+                                 rewriter=rewriter, reranker=reranker,
+                                 rerank_factor=settings.rerank_factor)
+            ans = generate_answer(s.question, retrieved, llm)
+            r = evaluate_sample(s, retrieved, ans, scorer)
+            rows.append(r)
+            print(f"{'✓' if r['hit'] else '✗':>4} "
+                  f"{r['mrr']:>5.2f} {r['gen_score']:>5.2f} "
+                  f"{'是' if r['refusal'] else '否':>4}  {s.question}")
 
     agg = aggregate(rows)
     print("-" * 72)
     print(f"\n=== 汇总({agg['n']} 条)===")
-    print(f"检索命中率 hit@{settings.top_k}: {agg['hit_rate']:.1%}")
-    print(f"平均 MRR:              {agg['avg_mrr']:.3f}")
+    if not args.agent:
+        print(f"检索命中率 hit@{settings.top_k}: {agg['hit_rate']:.1%}")
+        print(f"平均 MRR:              {agg['avg_mrr']:.3f}")
     print(f"平均生成分({scorer_name}): {agg['avg_gen_score']:.3f}")
     print(f"拒答条数:              {agg['refusals']}/{agg['n']}")
 

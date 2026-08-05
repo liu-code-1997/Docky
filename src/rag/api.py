@@ -26,12 +26,19 @@ class LibrariesResponse(BaseModel):
     libraries: list[str]
 
 
-def create_app(pipeline, store) -> FastAPI:
+def create_app(pipeline, store, agent=None) -> FastAPI:
     app = FastAPI(title="Docky", description="Docky · 面向学习的技术文档 RAG 问答小助手")
 
     @app.post("/ask", response_model=Answer)
     def ask(req: AskRequest) -> Answer:
         return pipeline.ask(req.question, library=req.library)
+
+    @app.post("/agent/ask", response_model=Answer)
+    def agent_ask(req: AskRequest) -> Answer:
+        # M6:agent 自主检索循环。未配置 agent 时返回 503(而非崩溃)。
+        if agent is None:
+            raise HTTPException(status_code=503, detail="agent 未配置")
+        return agent.ask(req.question, library=req.library)
 
     @app.get("/libraries", response_model=LibrariesResponse)
     def libraries() -> LibrariesResponse:

@@ -24,10 +24,19 @@ class FakeStore:
         return self._libraries
 
 
-def _client(pipeline=None, store=None) -> TestClient:
+class FakeAgent:
+    def __init__(self):
+        self.calls = []
+
+    def ask(self, question: str, library: str | None = None) -> Answer:
+        self.calls.append((question, library))
+        return Answer(text="agent 答案", sources=["fastapi/a.md", "fastapi/b.md"])
+
+
+def _client(pipeline=None, store=None, agent=None) -> TestClient:
     pipeline = pipeline or FakePipeline()
     store = store or FakeStore(["fastapi"])
-    return TestClient(create_app(pipeline, store))
+    return TestClient(create_app(pipeline, store, agent=agent))
 
 
 def test_ask_returns_answer_and_sources():
@@ -80,4 +89,28 @@ def test_health_ok_when_store_reachable():
 def test_health_degraded_when_store_unreachable():
     client = _client(store=FakeStore([], ok=False))
     resp = client.get("/health")
+    assert resp.status_code == 503
+
+
+def test_agent_ask_returns_answer():
+    agent = FakeAgent()
+    client = _client(agent=agent)
+    resp = client.post("/agent/ask", json={"question": "路径参数?", "library": "fastapi"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["text"] == "agent 答案"
+    assert body["sources"] == ["fastapi/a.md", "fastapi/b.md"]
+    assert agent.calls == [("路径参数?", "fastapi")]
+
+
+def test_agent_ask_validates_blank_question():
+    client = _client(agent=FakeAgent())
+    resp = client.post("/agent/ask", json={"question": "  "})
+    assert resp.status_code == 422
+
+
+def test_agent_ask_503_when_agent_not_configured():
+    # 没注入 agent 时,端点应返回 503 而非崩溃
+    client = _client(agent=None)
+    resp = client.post("/agent/ask", json={"question": "q"})
     assert resp.status_code == 503

@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.7
     eval_temperature: float = 0.0
 
+    # ---- M6 agent 的对话 LLM(function calling)----
+    # provider: openai_compat(覆盖 OpenAI/DeepSeek/Groq/vLLM/Ollama)| claude
+    chat_provider: str = "openai_compat"
+    # openai_compat 三旋钮:换厂商/模型/地址只改这几行(密钥从环境变量读)
+    chat_base_url: str = "http://localhost:11434/v1"   # 默认本地 Ollama 的 /v1 端点
+    chat_model: str = "qwen2.5:7b"
+    chat_api_key_env: str = "OPENAI_API_KEY"           # 从哪个环境变量读 key(本地可空)
+    # claude(chat_provider=claude 时生效;ANTHROPIC_API_KEY 从环境变量读)
+    claude_model: str = "claude-opus-5"
+    # agent 循环兜底上限
+    agent_max_steps: int = 5
+
 
 def get_settings() -> Settings:
     """返回一个 Settings 实例。集中在此,方便测试时替换。"""

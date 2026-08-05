@@ -17,6 +17,9 @@ from rag.providers.qdrant_store import QdrantStore
 from rag.pipeline import RagPipeline
 from rag.query_rewrite import LlmQueryRewriter
 from rag.rerank import LlmReranker
+from rag.retrieve import retrieve
+from rag.agent import RagAgent
+from rag.providers.chat_factory import build_chat_llm
 from rag.api import create_app
 
 
@@ -33,7 +36,17 @@ def build_app():
     pipeline = RagPipeline(embedder, store, llm, top_k=settings.top_k,
                            rewriter=rewriter, reranker=reranker,
                            rerank_factor=settings.rerank_factor)
-    return create_app(pipeline, store)
+
+    # M6:装配 agent —— retriever 回调复用现有 retrieve 链路(含改写/重排)
+    def retriever(query, library=None, top_k=settings.top_k):
+        return retrieve(query, embedder, store, top_k=top_k, library=library,
+                        rewriter=rewriter, reranker=reranker,
+                        rerank_factor=settings.rerank_factor)
+
+    agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
+                     top_k=settings.top_k, max_steps=settings.agent_max_steps)
+
+    return create_app(pipeline, store, agent=agent)
 
 
 def main() -> None:

@@ -29,3 +29,38 @@ class EvalSample(BaseModel):
     expected_source: str | None = None       # 期望命中的来源文件;无答案样本为 None
     expected_keywords: list[str] = []         # 方法A:答案里应出现的关键词
     expected_answer: str = ""                 # 方法B/C:标准答案(A 用不到)
+
+
+# ---- M6:对话 / 工具调用抽象 ----
+
+class ToolCall(BaseModel):
+    """LLM 发起的一次工具调用请求。"""
+    id: str                        # 调用 id,回填结果时用它对应
+    name: str                      # 工具名,如 "search_docs"
+    arguments: dict = {}           # 工具参数
+
+
+class ToolSpec(BaseModel):
+    """告诉 LLM 有哪个工具可用及其参数(JSON Schema)。"""
+    name: str
+    description: str
+    parameters: dict               # JSON Schema 描述参数
+
+
+class Message(BaseModel):
+    """一条对话消息。role: system | user | assistant | tool。"""
+    role: str
+    content: str = ""
+    tool_calls: list[ToolCall] = []       # assistant 回合可能带一组工具调用
+    tool_call_id: str | None = None       # role=tool 时,对应哪个 ToolCall
+
+
+class ChatResponse(BaseModel):
+    """ChatLLM 一个回合的产物:要么最终文本,要么一组待执行的工具调用。"""
+    text: str = ""
+    tool_calls: list[ToolCall] = []
+
+    @property
+    def is_final(self) -> bool:
+        """无工具调用即为终态(该文本就是最终答案)。"""
+        return not self.tool_calls

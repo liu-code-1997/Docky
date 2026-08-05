@@ -1,6 +1,8 @@
 """可插拔接口:本地↔API、Qdrant↔其他库切换时,只换实现,不动核心逻辑。"""
 from abc import ABC, abstractmethod
-from rag.models import Chunk, RetrievedChunk, EvalSample
+from rag.models import (
+    Chunk, RetrievedChunk, EvalSample, Message, ToolSpec, ChatResponse,
+)
 
 
 class Embedder(ABC):
@@ -71,3 +73,16 @@ class Reranker(ABC):
     def rerank(self, question: str, candidates: list[RetrievedChunk],
                top_k: int) -> list[RetrievedChunk]:
         """返回重排后的前 top_k 个候选。"""
+
+
+class ChatLLM(ABC):
+    """支持多轮消息 + 工具调用的对话式 LLM(M6 agent 用)。
+
+    与 LLM.generate(纯文本单轮)不同:接收整段对话与可用工具,
+    返回助手回合——要么最终文本,要么一组 tool_calls。
+    """
+
+    @abstractmethod
+    def chat(self, messages: list[Message],
+             tools: list[ToolSpec]) -> ChatResponse:
+        """给定对话历史与可用工具,返回助手的下一回合。"""
