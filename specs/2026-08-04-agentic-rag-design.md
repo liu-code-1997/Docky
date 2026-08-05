@@ -56,9 +56,14 @@ class ChatLLM(ABC):
 | 组件 | 位置 | 说明 |
 |---|---|---|
 | `ChatLLM` 接口 + `Message`/`ToolSpec`/`ChatResponse` 模型 | `interfaces.py` / `models.py` | 多轮 + 工具调用抽象 |
-| `OllamaChatLLM` | `providers/ollama_chat.py` | 走 `/api/chat`,传 `tools`,解析 `tool_calls` |
-| `ClaudeChatLLM` | `providers/claude_chat.py` | anthropic SDK 原生 tool use;model 从配置、key 从环境变量 |
+| `OpenAICompatChatLLM` | `providers/openai_chat.py` | 走 `/v1/chat/completions`,传 `tools`,解析 `tool_calls`。**一个类覆盖一大片**:OpenAI、DeepSeek、Groq、本地 vLLM,**以及 Ollama**(Ollama 也暴露 `/v1` 兼容端点)。靠 base_url + model + key 区分 |
+| `ClaudeChatLLM` | `providers/claude_chat.py` | anthropic SDK 原生 tool use(协议不同,单独实现);model 从配置、key 从环境变量 |
 | `RagAgent` | `agent.py` | 循环本体 + `search_docs` 工具 |
+
+**为什么这样分**:市面上绝大多数 LLM 服务(含本地 Ollama/vLLM)都提供 OpenAI 兼容的
+`/v1/chat/completions` 接口,所以**一个 `OpenAICompatChatLLM` 就能驱动它们全部**——换厂商只改
+`.env`(base_url/model/key),不写新代码。Claude 的 tool use 协议与 OpenAI 不同,单独一个类。
+`ChatLLM` 接口保证:未来若真要接某个协议独特的厂商,再写一个类即可,agent 循环不受影响。
 
 ## Agent 循环(agent.py)
 
@@ -80,12 +85,41 @@ class RagAgent:
 
 ## 配置(config.py + .env.example)
 
+Provider 全可配:换厂商/模型/地址只改 `.env`,不改代码。密钥永远从环境变量读,不入配置文件。
+
 ```python
-llm_provider: str = "ollama"          # ollama | claude
-claude_model: str = "claude-opus-5"   # llm_provider=claude 时生效
-agent_max_steps: int = 5              # 循环兜底上限
-# ANTHROPIC_API_KEY 从环境变量读,不入配置文件
+# provider:openai_compat(默认,覆盖 OpenAI/DeepSeek/Groq/vLLM/Ollama)| claude
+chat_provider: str = "openai_compat"
+
+# openai_compat 用的三个旋钮(换厂商只改这几行)
+chat_base_url: str = "http://localhost:11434/v1"   # 默认本地 Ollama 的 /v1 端点
+chat_model: str = "qwen2.5:7b"
+chat_api_key_env: str = "OPENAI_API_KEY"           # 从哪个环境变量读 key(本地 Ollama 可留空)
+
+# claude 用(chat_provider=claude 时生效)
+claude_model: str = "claude-opus-5"
+# ANTHROPIC_API_KEY 从环境变量读
+
+agent_max_steps: int = 5                            # 循环兜底上限
 ```
+
+换厂商示例(全部只改 `.env`,零代码改动):
+
+```bash
+# 本地 Ollama(默认)
+CHAT_BASE_URL=http://localhost:11434/v1
+CHAT_MODEL=qwen2.5:7b
+
+# DeepSeek
+CHAT_BASE_URL=https://api.deepseek.com/v1
+CHAT_MODEL=deepseek-chat
+CHAT_API_KEY_ENV=DEEPSEEK_API_KEY     # 再 export DEEPSEEK_API_KEY=...
+
+# Groq / OpenAI / 本地 vLLM 同理,改 base_url + model + key_env 即可
+```
+
+**不做**(YAGNI):provider 动态注册表 / 插件加载。`ChatLLM` 接口已提供"写个类即扩展"的
+能力,再加一层动态机制是过度设计;真遇到协议独特的厂商再写一个类即可。
 
 ## 验证:三方对比实验(延续 M4/M5 消融风格)
 
@@ -103,7 +137,8 @@ agent_max_steps: int = 5              # 循环兜底上限
 
 - `test_agent`:用 FakeChatLLM(可编排返回 tool_calls 或最终文本)验证循环——
   单轮直接答、多轮检索、到 max_steps 兜底、出处累积、拒答路径。
-- `test_ollama_chat` / `test_claude_chat`:mock HTTP/SDK,验证 tools 传参与 tool_calls 解析。
+- `test_openai_chat` / `test_claude_chat`:mock HTTP/SDK,验证 tools 传参与 tool_calls 解析
+  (openai_compat 用同一测试覆盖 OpenAI/DeepSeek/Ollama 等,因为它们共用 `/v1` 协议)。
 - 不真连模型(与现有 test_ollama_* 一致的 mock 风格)。
 
 ## 非目标 / 诚实提醒(YAGNI)
