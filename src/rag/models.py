@@ -1,5 +1,5 @@
 """核心数据模型:跨各模块传递的最小单位。"""
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class Chunk(BaseModel):
@@ -24,11 +24,22 @@ class Answer(BaseModel):
 
 
 class EvalSample(BaseModel):
-    """评估集的一条样本(M4)。"""
+    """评估集的一条样本(M4;M7 升多来源)。"""
     question: str
-    expected_source: str | None = None       # 期望命中的来源文件;无答案样本为 None
+    expected_sources: list[str] = []          # 相关来源文件;负例(拒答样本)为 []
     expected_keywords: list[str] = []         # 方法A:答案里应出现的关键词
     expected_answer: str = ""                 # 方法B/C:标准答案(A 用不到)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _compat_expected_source(cls, data):
+        """兼容旧字段 expected_source(str|None)→ expected_sources。
+        迁移完 dataset.json 后仍保留,以兜住任何遗留旧格式输入。"""
+        if isinstance(data, dict) and "expected_source" in data:
+            data = dict(data)
+            src = data.pop("expected_source")
+            data.setdefault("expected_sources", [src] if src else [])
+        return data
 
 
 # ---- M6:对话 / 工具调用抽象 ----

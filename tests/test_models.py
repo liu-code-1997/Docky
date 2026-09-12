@@ -1,4 +1,4 @@
-from rag.models import Chunk, Answer
+from rag.models import Chunk, Answer, EvalSample
 
 
 def test_chunk_holds_text_and_metadata():
@@ -23,3 +23,23 @@ def test_answer_holds_text_and_sources():
 def test_answer_sources_defaults_to_empty_list():
     a = Answer(text="根据现有资料无法回答。")
     assert a.sources == []
+
+
+def test_eval_sample_multi_source():
+    s = EvalSample(question="q", expected_sources=["a.md", "b.md"])
+    assert s.expected_sources == ["a.md", "b.md"]
+
+
+def test_eval_sample_negative_defaults_empty():
+    s = EvalSample(question="q")
+    assert s.expected_sources == []
+
+
+def test_eval_sample_compat_old_single_source():
+    s = EvalSample(question="q", expected_source="a.md")
+    assert s.expected_sources == ["a.md"]
+
+
+def test_eval_sample_compat_old_null_source():
+    s = EvalSample(question="q", expected_source=None)
+    assert s.expected_sources == []
