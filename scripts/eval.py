@@ -85,7 +85,14 @@ def main() -> None:
             ans = agent.ask(s.question, library=None)
             gen = scorer.score(ans.text, s)
             refusal = "无法回答" in ans.text
-            rows.append({"hit": False, "mrr": 0.0, "gen_score": gen, "refusal": refusal})
+            negative = not s.expected_sources
+            row = {"question": s.question, "negative": negative,
+                   "refusal": refusal,
+                   "refusal_correct": refusal if negative else not refusal}
+            if not negative:
+                row.update({"hit": False, "mrr": 0.0, "recall": 0.0,
+                            "precision": 0.0, "ndcg": 0.0, "gen_score": gen})
+            rows.append(row)
             print(f"gen={gen:>4.2f} {'拒答' if refusal else '答  '}  {s.question}")
         else:
             retrieved = retrieve(s.question, embedder, store,
@@ -95,18 +102,24 @@ def main() -> None:
             ans = generate_answer(s.question, retrieved, llm)
             r = evaluate_sample(s, retrieved, ans, scorer)
             rows.append(r)
-            print(f"{'✓' if r['hit'] else '✗':>4} "
-                  f"{r['mrr']:>5.2f} {r['gen_score']:>5.2f} "
-                  f"{'是' if r['refusal'] else '否':>4}  {s.question}")
+            if r["negative"]:
+                print(f"[neg] {'拒答✓' if r['refusal_correct'] else '误答✗'}  {s.question}")
+            else:
+                print(f"hit={'✓' if r['hit'] else '✗'} "
+                      f"recall={r['recall']:.2f} ndcg={r['ndcg']:.2f} "
+                      f"gen={r['gen_score']:.2f}  {s.question}")
 
     agg = aggregate(rows)
     print("-" * 72)
-    print(f"\n=== 汇总({agg['n']} 条)===")
+    print(f"\n=== 汇总(正例 {agg['n_positive']} / 负例 {agg['n_negative']})===")
     if not args.agent:
-        print(f"检索命中率 hit@{settings.top_k}: {agg['hit_rate']:.1%}")
-        print(f"平均 MRR:              {agg['avg_mrr']:.3f}")
-    print(f"平均生成分({scorer_name}): {agg['avg_gen_score']:.3f}")
-    print(f"拒答条数:              {agg['refusals']}/{agg['n']}")
+        print(f"hit@{settings.top_k}:        {agg['hit_rate']:.1%}")
+        print(f"recall@{settings.top_k}:     {agg['avg_recall']:.3f}")
+        print(f"precision@{settings.top_k}:  {agg['avg_precision']:.3f}")
+        print(f"nDCG@{settings.top_k}:       {agg['avg_ndcg']:.3f}")
+        print(f"MRR:            {agg['avg_mrr']:.3f}")
+    print(f"生成分({scorer_name}): {agg['avg_gen_score']:.3f}")
+    print(f"拒答正确率:      {agg['refusal_accuracy']:.1%}")
 
 
 if __name__ == "__main__":
