@@ -8,7 +8,7 @@
 from rag.interfaces import LLM, QueryRewriter
 
 
-_REWRITE_PROMPT = """你在为技术文档检索改写查询。文档是英文的。
+_DEFAULT_REWRITE_PROMPT = """你在为技术文档检索改写查询。文档是英文的。
 请针对下面的问题,只输出最相关的英文关键词/术语(空格分隔,不要解释、不要标点):
 
 问题:{question}
@@ -16,11 +16,12 @@ _REWRITE_PROMPT = """你在为技术文档检索改写查询。文档是英文�
 
 
 class LlmQueryRewriter(QueryRewriter):
-    def __init__(self, llm: LLM):
+    def __init__(self, llm: LLM, prompt: str = _DEFAULT_REWRITE_PROMPT):
         self.llm = llm
+        self.prompt = prompt
 
     def rewrite(self, question: str) -> str:
-        expansion = self.llm.generate(_REWRITE_PROMPT.format(question=question)).strip()
+        expansion = self.llm.generate(self.prompt.format(question=question)).strip()
         if not expansion:
             return question.strip()  # 改写没产出时,退回原问题
         # 拼上原问题:即便改写跑偏,原词仍在,不至于比不改写更差

@@ -36,3 +36,19 @@ def test_rewrite_strips_whitespace():
     out = rw.rewrite("查询参数")
     assert "query parameter" in out
     assert out == out.strip()
+
+
+def test_rewriter_uses_injected_prompt():
+    class _SimpleFakeLLM:
+        def __init__(self):
+            self.seen = None
+
+        def generate(self, prompt):
+            self.seen = prompt
+            return "扩展词"
+
+    llm = _SimpleFakeLLM()
+    r = LlmQueryRewriter(llm, prompt="自定义改写:{question}")
+    out = r.rewrite("原问题")
+    assert llm.seen == "自定义改写:原问题"  # 用了注入 prompt
+    assert "原问题" in out  # 仍拼回原问题兜底
