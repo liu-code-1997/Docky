@@ -1,36 +1,71 @@
-"""评估逻辑(M4):检索层指标 + 生成层评分 + 聚合。
+"""评估逻辑(M4;M7 升多来源)。检索层指标 + 生成层评分 + 聚合,全为纯函数。"""
+import math
 
-检索层(与评分方法无关,始终算):
-- hit@k:期望来源是否出现在检索到的 Top-K 里
-- MRR:期望来源的倒数排名(越靠前越高)
-
-生成层:调注入的 AnswerScorer 打分 + 检测拒答。
-
-全部纯函数,便于单测;真实 pipeline 由 CLI 装配后传入结果。
-"""
 from rag.interfaces import AnswerScorer
 from rag.models import Answer, EvalSample, RetrievedChunk
 
 _REFUSAL_MARKER = "无法回答"
 
 
-def hit_at_k(expected_source: str | None,
+def _relevance_flags(expected_sources: list[str],
+                     retrieved: list[RetrievedChunk]) -> list[bool]:
+    """逐个检索块是否相关(source ∈ expected_sources)。"""
+    relevant = set(expected_sources)
+    return [rc.chunk.source in relevant for rc in retrieved]
+
+
+def hit_at_k(expected_sources: list[str],
              retrieved: list[RetrievedChunk]) -> bool:
-    """期望来源是否在检索结果里。"""
-    if not expected_source:
+    """top-k 中出现任一相关来源即命中。"""
+    if not expected_sources:
         return False
-    return any(rc.chunk.source == expected_source for rc in retrieved)
+    return any(_relevance_flags(expected_sources, retrieved))
 
 
-def reciprocal_rank(expected_source: str | None,
+def reciprocal_rank(expected_sources: list[str],
                     retrieved: list[RetrievedChunk]) -> float:
-    """期望来源的倒数排名:第1位=1.0,第2位=0.5,...;不在则 0。"""
-    if not expected_source:
+    """第一个相关块的倒数排名;无则 0。"""
+    if not expected_sources:
         return 0.0
-    for i, rc in enumerate(retrieved, start=1):
-        if rc.chunk.source == expected_source:
+    for i, rel in enumerate(_relevance_flags(expected_sources, retrieved),
+                            start=1):
+        if rel:
             return 1.0 / i
     return 0.0
+
+
+def recall_at_k(expected_sources: list[str],
+                retrieved: list[RetrievedChunk]) -> float:
+    """top-k 命中的不同相关来源数 / 相关来源总数。"""
+    if not expected_sources:
+        return 0.0
+    retrieved_sources = {rc.chunk.source for rc in retrieved}
+    hit_sources = retrieved_sources & set(expected_sources)
+    return len(hit_sources) / len(set(expected_sources))
+
+
+def precision_at_k(expected_sources: list[str],
+                   retrieved: list[RetrievedChunk]) -> float:
+    """top-k 中相关块数 / 返回块数(k)。"""
+    if not expected_sources or not retrieved:
+        return 0.0
+    flags = _relevance_flags(expected_sources, retrieved)
+    return sum(flags) / len(retrieved)
+
+
+def ndcg_at_k(expected_sources: list[str],
+              retrieved: list[RetrievedChunk]) -> float:
+    """二元相关性 nDCG@k;IDCG 用 top-k 内相关数为理想上界(见 spec 诚实说明)。"""
+    if not expected_sources or not retrieved:
+        return 0.0
+    flags = _relevance_flags(expected_sources, retrieved)
+    dcg = sum((1.0 if rel else 0.0) / math.log2(i + 2)
+              for i, rel in enumerate(flags))
+    n_rel = sum(flags)
+    if n_rel == 0:
+        return 0.0
+    idcg = sum(1.0 / math.log2(i + 2) for i in range(n_rel))
+    return dcg / idcg
 
 
 def is_refusal(answer_text: str) -> bool:
