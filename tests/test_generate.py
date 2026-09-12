@@ -62,3 +62,21 @@ def test_answer_with_no_chunks_has_empty_sources():
     result = answer("问题", [], llm)
     assert result.sources == []
     assert result.text == "这是答案。"
+
+
+def _rc_simple(text="正文"):
+    return RetrievedChunk(chunk=Chunk(id="s::0", text=text, source="s.md",
+                                      library="l", chunk_index=0), score=1.0)
+
+
+def test_build_prompt_injects_persona_and_refusal():
+    prompt = build_prompt("问题", [_rc_simple()], persona="你是保险顾问",
+                          refusal_text="资料里没有这条")
+    assert "你是保险顾问" in prompt
+    assert "资料里没有这条" in prompt
+
+
+def test_build_prompt_defaults_preserve_current_behavior():
+    prompt = build_prompt("问题", [_rc_simple()])
+    assert "技术文档问答助手" in prompt
+    assert "根据现有资料无法回答" in prompt
