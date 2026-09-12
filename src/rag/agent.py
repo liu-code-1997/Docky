@@ -14,14 +14,29 @@ from rag.interfaces import ChatLLM
 from rag.models import Answer, Message, ToolSpec, ToolCall, RetrievedChunk
 
 
-_SYSTEM = """你是一个严谨的技术文档问答助手,可以使用 search_docs 工具检索文档。
+_DEFAULT_PERSONA = "你是一个严谨的技术文档问答助手"
+_DEFAULT_REFUSAL = "根据现有资料无法回答"
 
-工作方式:
-- 需要资料时,**用结构化的工具调用**触发 search_docs,不要把工具调用当文本写进正文。
-- 若结果不够好,可以换个查询词再检索一轮。
-- 收集到足够资料后,只依据检索到的资料回答。
-- 如果检索不到相关资料,必须回答"根据现有资料无法回答",不要编造。
-- 回答尽量简洁、准确。"""
+
+def _build_system(persona: str, refusal_text: str) -> str:
+    """构造系统提示词。
+
+    Args:
+        persona: 角色描述,如"你是一个严谨的技术文档问答助手"
+        refusal_text: 拒答文本,如"根据现有资料无法回答"
+
+    Returns:
+        完整的系统提示词字符串
+    """
+    return (
+        f"{persona},可以使用 search_docs 工具检索文档。\n\n"
+        f"工作方式:\n"
+        f"- 需要资料时,**用结构化的工具调用**触发 search_docs,不要把工具调用当文本写进正文。\n"
+        f"- 若结果不够好,可以换个查询词再检索一轮。\n"
+        f"- 收集到足够资料后,只依据检索到的资料回答。\n"
+        f"- 如果检索不到相关资料,必须回答\"{refusal_text}\",不要编造。\n"
+        f"- 回答尽量简洁、准确。"
+    )
 
 
 SEARCH_DOCS = ToolSpec(
@@ -61,15 +76,18 @@ def _recover_tool_calls(text: str) -> list[ToolCall]:
 
 
 class RagAgent:
-    def __init__(self, llm: ChatLLM, retriever, top_k: int = 4, max_steps: int = 5):
+    def __init__(self, llm: ChatLLM, retriever, top_k: int = 4, max_steps: int = 5,
+                 persona: str = _DEFAULT_PERSONA,
+                 refusal_text: str = _DEFAULT_REFUSAL):
         self.llm = llm
         self.retriever = retriever      # callable(query, library=None, top_k=int) -> list[RetrievedChunk]
         self.top_k = top_k
         self.max_steps = max_steps
+        self._system = _build_system(persona, refusal_text)
 
     def ask(self, question: str, library: str | None = None) -> Answer:
         messages: list[Message] = [
-            Message(role="system", content=_SYSTEM),
+            Message(role="system", content=self._system),
             Message(role="user", content=question),
         ]
         sources: list[str] = []         # 累积、去重、保序

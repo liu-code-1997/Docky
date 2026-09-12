@@ -56,6 +56,11 @@ def _tool_call(query, library=None):
                     arguments={"query": query, "library": library})
 
 
+def _make_fake_chat_llm_returning_text(text):
+    """Helper: 构造一个返回给定文本的 FakeChatLLM。"""
+    return FakeChatLLM([ChatResponse(text=text, tool_calls=[])])
+
+
 def _agent(llm, retriever):
     # 用 retriever 替身注入,隔离真实检索
     return RagAgent(llm=llm, retriever=retriever, max_steps=5)
@@ -146,3 +151,12 @@ def test_recovers_tool_call_leaked_into_text():
     assert retriever.queries == [("path parameter", None)]   # 泄漏的调用被捞出并执行
     assert ans.sources == ["fastapi/path.md"]
     assert ans.text == "路径参数用花括号"
+
+
+def test_agent_system_prompt_uses_injected_persona():
+    from rag.agent import RagAgent
+    agent = RagAgent(llm=_make_fake_chat_llm_returning_text("答"),
+                     retriever=lambda q, library=None, top_k=4: [],
+                     persona="你是保险顾问", refusal_text="资料没有")
+    assert "你是保险顾问" in agent._system
+    assert "资料没有" in agent._system
