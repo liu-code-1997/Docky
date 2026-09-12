@@ -1,0 +1,11 @@
+persona = "你是一个严谨的技术文档问答助手"
+refusal_text = "根据现有资料无法回答"
+refusal_marker = "无法回答"
+rewrite_prompt = """你在为技术文档检索改写查询。文档是英文的。
+请针对下面的问题,只输出最相关的英文关键词/术语(空格分隔,不要解释、不要标点):
+
+问题:{question}
+英文关键词:"""
+noise_markers = ["sponsor", "fastapi cloud", "conf", "deploying to", "deployment successful"]
+embed_query_prefix = ""
+embed_doc_prefix = ""

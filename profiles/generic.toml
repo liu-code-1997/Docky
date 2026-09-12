@@ -1,0 +1,7 @@
+persona = "你是一个严谨的问答助手"
+refusal_text = "根据现有资料无法回答"
+refusal_marker = "无法回答"
+rewrite_prompt = ""
+noise_markers = []
+embed_query_prefix = ""
+embed_doc_prefix = ""

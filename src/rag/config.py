@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # 切分策略(M5 ①):char(按字符,baseline) | markdown(按标题+噪声过滤)
     chunk_strategy: str = "char"
 
+    # M8:领域 profile(profiles/<name>.toml),换领域=换名字
+    profile: str = "tech"
+
     # 查询改写(M5 ②):检索前用 LLM 扩展英文术语,缓解跨语言检索。
     # 经消融验证是最有效手段(hit@4 39%→94%),故默认开启。
     query_rewrite: bool = True
