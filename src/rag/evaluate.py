@@ -75,26 +75,45 @@ def is_refusal(answer_text: str) -> bool:
 
 def evaluate_sample(sample: EvalSample, retrieved: list[RetrievedChunk],
                     answer: Answer, scorer: AnswerScorer) -> dict:
-    """评估一条样本,返回该条的各项指标。"""
-    return {
+    """评估一条:正例算排序指标+生成分,负例只算拒答正确性。"""
+    negative = not sample.expected_sources
+    refusal = is_refusal(answer.text)
+    row: dict = {
         "question": sample.question,
-        "hit": hit_at_k(sample.expected_source, retrieved),
-        "mrr": reciprocal_rank(sample.expected_source, retrieved),
-        "gen_score": scorer.score(answer.text, sample),
-        "refusal": is_refusal(answer.text),
+        "negative": negative,
+        "refusal": refusal,
     }
+    if negative:
+        row["refusal_correct"] = refusal          # 负例应拒答
+    else:
+        es = sample.expected_sources
+        row["hit"] = hit_at_k(es, retrieved)
+        row["mrr"] = reciprocal_rank(es, retrieved)
+        row["recall"] = recall_at_k(es, retrieved)
+        row["precision"] = precision_at_k(es, retrieved)
+        row["ndcg"] = ndcg_at_k(es, retrieved)
+        row["gen_score"] = scorer.score(answer.text, sample)
+        row["refusal_correct"] = not refusal      # 正例不应误拒
+    return row
 
 
 def aggregate(rows: list[dict]) -> dict:
-    """把逐条结果聚合成总报告。"""
-    n = len(rows)
-    if n == 0:
-        return {"n": 0, "hit_rate": 0.0, "avg_mrr": 0.0,
-                "avg_gen_score": 0.0, "refusals": 0}
+    """正例算排序指标+生成分,拒答正确率跨全体;两组分开、互不污染。"""
+    positives = [r for r in rows if not r["negative"]]
+    negatives = [r for r in rows if r["negative"]]
+
+    def avg(items: list[dict], key: str) -> float:
+        return sum(i[key] for i in items) / len(items) if items else 0.0
+
     return {
-        "n": n,
-        "hit_rate": sum(1 for r in rows if r["hit"]) / n,
-        "avg_mrr": sum(r["mrr"] for r in rows) / n,
-        "avg_gen_score": sum(r["gen_score"] for r in rows) / n,
-        "refusals": sum(1 for r in rows if r["refusal"]),
+        "n": len(rows),
+        "n_positive": len(positives),
+        "n_negative": len(negatives),
+        "hit_rate": avg(positives, "hit"),
+        "avg_mrr": avg(positives, "mrr"),
+        "avg_recall": avg(positives, "recall"),
+        "avg_precision": avg(positives, "precision"),
+        "avg_ndcg": avg(positives, "ndcg"),
+        "avg_gen_score": avg(positives, "gen_score"),
+        "refusal_accuracy": avg(rows, "refusal_correct"),
     }
