@@ -11,14 +11,16 @@ def retrieve(question: str, embedder: Embedder, store: VectorStore,
              top_k: int, library: str | None = None,
              rewriter: QueryRewriter | None = None,
              reranker: Reranker | None = None,
-             rerank_factor: int = 5) -> list[RetrievedChunk]:
+             rerank_factor: int = 5,
+             query_prefix: str = "") -> list[RetrievedChunk]:
     """把问题向量化后,去向量库检索最相近的 top_k 块。
 
     - rewriter(M5②):非 None 时先改写查询再向量化,缓解跨语言检索。
     - reranker(M5③):非 None 时先召回 top_k×rerank_factor 个候选,再重排取前 top_k。
+    - query_prefix(M8):在向量化前拼接到查询文本,默认空串。
     """
     query = rewriter.rewrite(question) if rewriter is not None else question
-    query_vector = embedder.embed_one(query)
+    query_vector = embedder.embed_one(query_prefix + query)
 
     # 有重排器时多召回一些候选,交给重排器筛选
     recall_k = top_k * rerank_factor if reranker is not None else top_k

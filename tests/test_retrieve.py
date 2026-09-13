@@ -93,3 +93,23 @@ def test_retrieve_applies_reranker_and_recalls_more_candidates():
                        reranker=rr, rerank_factor=5)
     assert rr.got_n == 2          # 确实召回了多于 top_k 的候选
     assert len(results) == 1      # 最终截到 top_k
+
+
+def test_retrieve_prepends_query_prefix():
+    """verify query_prefix is prepended to query before embedding."""
+    class _CapEmbedder:
+        def __init__(self):
+            self.seen = None
+        def embed_one(self, text):
+            self.seen = text
+            return [0.0]
+        def embed(self, texts):
+            return [[0.0] for _ in texts]
+
+    class _EmptyStore:
+        def search(self, query_vector, top_k, library=None):
+            return []
+
+    emb = _CapEmbedder()
+    retrieve("路径参数", emb, _EmptyStore(), top_k=4, query_prefix="search_query: ")
+    assert emb.seen == "search_query: 路径参数"
