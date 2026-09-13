@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     # 检索参数(M2 使用)
     top_k: int = 4
 
+    # 混合检索(M9):True 时稀疏+密集联合召回,False 时仅密集检索(默认)
+    hybrid: bool = False
+    hybrid_prefetch_factor: int = 5
+
     # 评估参数(M4 使用):生成层评分方法 keyword | llm_judge | semantic
     eval_scorer: str = "keyword"
 

@@ -39,7 +39,8 @@ def main() -> None:
                        rewriter=rewriter, reranker=reranker,
                        rerank_factor=settings.rerank_factor,
                        persona=profile.persona, refusal_text=profile.refusal_text,
-                       query_prefix=profile.embed_query_prefix)
+                       query_prefix=profile.embed_query_prefix,
+                       hybrid=settings.hybrid)
 
     ans = pipe.ask(args.question, library=args.library)
 

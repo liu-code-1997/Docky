@@ -82,3 +82,18 @@ def test_pipeline_threads_persona_into_generation():
                     persona="你是保险顾问", refusal_text="资料没有")
     p.ask("问题")
     assert "你是保险顾问" in llm.seen
+
+
+def test_pipeline_hybrid_flag_routes_to_hybrid_search():
+    from rag.pipeline import RagPipeline
+    class _Emb:
+        def embed_one(self, t): return [0.0]
+    class _Store:
+        def __init__(self): self.mode = None
+        def search(self, *a, **k): self.mode = "dense"; return []
+        def hybrid_search(self, *a, **k): self.mode = "hybrid"; return []
+    class _LLM:
+        def generate(self, p): return "答"
+    st = _Store()
+    RagPipeline(_Emb(), st, _LLM(), top_k=4, hybrid=True).ask("q")
+    assert st.mode == "hybrid"

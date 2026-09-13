@@ -70,7 +70,8 @@ def main() -> None:
             return retrieve(query, embedder, store, top_k=top_k, library=library,
                             rewriter=rewriter, reranker=reranker,
                             rerank_factor=settings.rerank_factor,
-                            query_prefix=profile.embed_query_prefix)
+                            query_prefix=profile.embed_query_prefix,
+                            hybrid=settings.hybrid)
         agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
                          top_k=settings.top_k, max_steps=settings.agent_max_steps,
                          persona=profile.persona, refusal_text=profile.refusal_text)
@@ -103,7 +104,8 @@ def main() -> None:
                                  top_k=settings.top_k, library=None,
                                  rewriter=rewriter, reranker=reranker,
                                  rerank_factor=settings.rerank_factor,
-                                 query_prefix=profile.embed_query_prefix)
+                                 query_prefix=profile.embed_query_prefix,
+                                 hybrid=settings.hybrid)
             ans = generate_answer(s.question, retrieved, llm,
                                   persona=profile.persona,
                                   refusal_text=profile.refusal_text)

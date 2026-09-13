@@ -14,7 +14,7 @@ class RagPipeline:
                  top_k: int, rewriter: QueryRewriter | None = None,
                  reranker: Reranker | None = None, rerank_factor: int = 5,
                  persona: str | None = None, refusal_text: str | None = None,
-                 query_prefix: str = ""):
+                 query_prefix: str = "", hybrid: bool = False):
         self.embedder = embedder
         self.store = store
         self.llm = llm
@@ -22,6 +22,7 @@ class RagPipeline:
         self.rewriter = rewriter    # M5②:非 None 时检索前改写查询
         self.reranker = reranker    # M5③:非 None 时检索后重排
         self.rerank_factor = rerank_factor
+        self.hybrid = hybrid        # M9:True 时走混合检索路径
         from rag.generate import _DEFAULT_PERSONA, _DEFAULT_REFUSAL
         self.persona = persona if persona is not None else _DEFAULT_PERSONA
         self.refusal_text = refusal_text if refusal_text is not None else _DEFAULT_REFUSAL
@@ -33,6 +34,7 @@ class RagPipeline:
                           top_k=self.top_k, library=library,
                           rewriter=self.rewriter, reranker=self.reranker,
                           rerank_factor=self.rerank_factor,
-                          query_prefix=self.query_prefix)
+                          query_prefix=self.query_prefix,
+                          hybrid=self.hybrid)
         return generate_answer(question, chunks, self.llm,
                                persona=self.persona, refusal_text=self.refusal_text)

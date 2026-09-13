@@ -54,7 +54,8 @@ def main() -> None:
                                      top_k=settings.top_k, library=None,
                                      rewriter=rewriter, reranker=reranker,
                                      rerank_factor=settings.rerank_factor,
-                                     query_prefix=profile.embed_query_prefix)
+                                     query_prefix=profile.embed_query_prefix,
+                                     hybrid=settings.hybrid)
                 ans = generate_answer(s.question, retrieved, llm,
                                       persona=profile.persona,
                                       refusal_text=profile.refusal_text)
