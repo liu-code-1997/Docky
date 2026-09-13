@@ -23,6 +23,8 @@ from rag.scoring import get_scorer
 from rag.evaluate import evaluate_sample, aggregate
 from rag.query_rewrite import LlmQueryRewriter
 from rag.rerank import build_reranker
+from rag.multi_query import expand_queries
+from rag.ordering import reorder_for_long_context
 from rag.agent import RagAgent
 from rag.providers.chat_factory import build_chat_llm
 from rag.models import EvalSample
@@ -63,6 +65,12 @@ def main() -> None:
     use_rerank = args.rerank if args.rerank is not None else settings.rerank
     reranker = build_reranker(settings.rerank_provider, llm) if use_rerank else None
 
+    # M11:多查询扩展器(multi_query 开时)
+    query_expander = (
+        (lambda q: expand_queries(llm, q, settings.multi_query_n))
+        if settings.multi_query else None
+    )
+
     # M6:agent 模式 —— 用自主检索循环替代单轮 RAG
     agent = None
     if args.agent:
@@ -72,7 +80,8 @@ def main() -> None:
                             rerank_factor=settings.rerank_factor,
                             query_prefix=profile.embed_query_prefix,
                             hybrid=settings.hybrid,
-                            hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
+                            hybrid_prefetch_factor=settings.hybrid_prefetch_factor,
+                            query_expander=query_expander)
         agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
                          top_k=settings.top_k, max_steps=settings.agent_max_steps,
                          persona=profile.persona, refusal_text=profile.refusal_text)
@@ -107,10 +116,14 @@ def main() -> None:
                                  rerank_factor=settings.rerank_factor,
                                  query_prefix=profile.embed_query_prefix,
                                  hybrid=settings.hybrid,
-                                 hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
+                                 hybrid_prefetch_factor=settings.hybrid_prefetch_factor,
+                                 query_expander=query_expander)
+            if settings.reorder_context:
+                retrieved = reorder_for_long_context(retrieved)
             ans = generate_answer(s.question, retrieved, llm,
                                   persona=profile.persona,
-                                  refusal_text=profile.refusal_text)
+                                  refusal_text=profile.refusal_text,
+                                  inline_citations=settings.inline_citations)
             r = evaluate_sample(s, retrieved, ans, scorer,
                                 refusal_marker=profile.refusal_marker)
             rows.append(r)

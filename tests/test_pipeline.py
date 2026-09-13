@@ -97,3 +97,23 @@ def test_pipeline_hybrid_flag_routes_to_hybrid_search():
     st = _Store()
     RagPipeline(_Emb(), st, _LLM(), top_k=4, hybrid=True).ask("q")
     assert st.mode == "hybrid"
+
+
+def test_pipeline_inline_citations_forwarded_to_generate():
+    """pipeline 开 inline_citations 时,喂给 LLM 的 prompt 应含行内引用指令。"""
+    class _CapLLM:
+        def __init__(self): self.seen = None
+        def generate(self, prompt): self.seen = prompt; return "答"
+
+    class _Emb:
+        def embed_one(self, t): return [0.0]
+        def embed(self, ts): return [[0.0] for _ in ts]
+
+    class _Store:
+        def search(self, v, top_k, library=None): return []
+
+    llm = _CapLLM()
+    p = RagPipeline(_Emb(), _Store(), llm, top_k=4, inline_citations=True)
+    p.ask("问题")
+    # generate.build_prompt 开 inline_citations 时在规则里插入编号标注要求
+    assert "编号" in llm.seen

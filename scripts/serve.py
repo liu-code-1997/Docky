@@ -19,6 +19,7 @@ from rag.pipeline import RagPipeline
 from rag.query_rewrite import LlmQueryRewriter
 from rag.rerank import build_reranker
 from rag.retrieve import retrieve
+from rag.multi_query import expand_queries
 from rag.agent import RagAgent
 from rag.providers.chat_factory import build_chat_llm
 from rag.api import create_app
@@ -35,13 +36,22 @@ def build_app():
                         url=settings.qdrant_url)
     rewriter = LlmQueryRewriter(llm, profile.rewrite_prompt) if (settings.query_rewrite and profile.rewrite_prompt) else None
     reranker = build_reranker(settings.rerank_provider, llm) if settings.rerank else None
+    # M11:多查询扩展器(multi_query 开时)
+    query_expander = (
+        (lambda q: expand_queries(llm, q, settings.multi_query_n))
+        if settings.multi_query else None
+    )
     pipeline = RagPipeline(embedder, store, llm, top_k=settings.top_k,
                            rewriter=rewriter, reranker=reranker,
                            rerank_factor=settings.rerank_factor,
                            persona=profile.persona, refusal_text=profile.refusal_text,
                            query_prefix=profile.embed_query_prefix,
                            hybrid=settings.hybrid,
-                           hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
+                           hybrid_prefetch_factor=settings.hybrid_prefetch_factor,
+                           multi_query=settings.multi_query,
+                           multi_query_n=settings.multi_query_n,
+                           reorder_context=settings.reorder_context,
+                           inline_citations=settings.inline_citations)
 
     # M6:装配 agent —— retriever 回调复用现有 retrieve 链路(含改写/重排)
     def retriever(query, library=None, top_k=settings.top_k):
@@ -50,7 +60,8 @@ def build_app():
                         rerank_factor=settings.rerank_factor,
                         query_prefix=profile.embed_query_prefix,
                         hybrid=settings.hybrid,
-                        hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
+                        hybrid_prefetch_factor=settings.hybrid_prefetch_factor,
+                        query_expander=query_expander)
 
     agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
                      top_k=settings.top_k, max_steps=settings.agent_max_steps,

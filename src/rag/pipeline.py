@@ -7,6 +7,8 @@ from rag.interfaces import Embedder, VectorStore, LLM, QueryRewriter, Reranker
 from rag.models import Answer
 from rag.retrieve import retrieve
 from rag.generate import answer as generate_answer
+from rag.multi_query import expand_queries
+from rag.ordering import reorder_for_long_context
 
 
 class RagPipeline:
@@ -15,7 +17,9 @@ class RagPipeline:
                  reranker: Reranker | None = None, rerank_factor: int = 5,
                  persona: str | None = None, refusal_text: str | None = None,
                  query_prefix: str = "", hybrid: bool = False,
-                 hybrid_prefetch_factor: int = 5):
+                 hybrid_prefetch_factor: int = 5,
+                 multi_query: bool = False, multi_query_n: int = 3,
+                 reorder_context: bool = False, inline_citations: bool = False):
         self.embedder = embedder
         self.store = store
         self.llm = llm
@@ -25,6 +29,11 @@ class RagPipeline:
         self.rerank_factor = rerank_factor
         self.hybrid = hybrid        # M9:True 时走混合检索路径
         self.hybrid_prefetch_factor = hybrid_prefetch_factor  # M9:每路 Prefetch 倍数
+        # M11 三开关
+        self.multi_query = multi_query
+        self.multi_query_n = multi_query_n
+        self.reorder_context = reorder_context
+        self.inline_citations = inline_citations
         from rag.generate import _DEFAULT_PERSONA, _DEFAULT_REFUSAL
         self.persona = persona if persona is not None else _DEFAULT_PERSONA
         self.refusal_text = refusal_text if refusal_text is not None else _DEFAULT_REFUSAL
@@ -32,12 +41,20 @@ class RagPipeline:
 
     def ask(self, question: str, library: str | None = None) -> Answer:
         """问题 → 检索 Top-K → 据资料生成带出处的答案。"""
+        query_expander = (
+            (lambda q: expand_queries(self.llm, q, self.multi_query_n))
+            if self.multi_query else None
+        )
         chunks = retrieve(question, self.embedder, self.store,
                           top_k=self.top_k, library=library,
                           rewriter=self.rewriter, reranker=self.reranker,
                           rerank_factor=self.rerank_factor,
                           query_prefix=self.query_prefix,
                           hybrid=self.hybrid,
-                          hybrid_prefetch_factor=self.hybrid_prefetch_factor)
+                          hybrid_prefetch_factor=self.hybrid_prefetch_factor,
+                          query_expander=query_expander)
+        if self.reorder_context:
+            chunks = reorder_for_long_context(chunks)
         return generate_answer(question, chunks, self.llm,
-                               persona=self.persona, refusal_text=self.refusal_text)
+                               persona=self.persona, refusal_text=self.refusal_text,
+                               inline_citations=self.inline_citations)

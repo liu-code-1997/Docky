@@ -21,6 +21,8 @@ from rag.scoring import get_scorer
 from rag.evaluate import evaluate_sample, aggregate
 from rag.query_rewrite import LlmQueryRewriter
 from rag.rerank import build_reranker
+from rag.multi_query import expand_queries
+from rag.ordering import reorder_for_long_context
 from rag.ablate import format_comparison_table
 from rag.models import EvalSample
 
@@ -43,6 +45,12 @@ def main() -> None:
     samples = [EvalSample(**d) for d in
                json.loads(Path(args.dataset).read_text(encoding="utf-8"))]
 
+    # M11:多查询扩展器(从 settings 构造)
+    query_expander = (
+        (lambda q: expand_queries(llm, q, settings.multi_query_n))
+        if settings.multi_query else None
+    )
+
     results = []
     for use_rewrite in (False, True):
         for use_rerank in (False, True):
@@ -56,10 +64,14 @@ def main() -> None:
                                      rerank_factor=settings.rerank_factor,
                                      query_prefix=profile.embed_query_prefix,
                                      hybrid=settings.hybrid,
-                                     hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
+                                     hybrid_prefetch_factor=settings.hybrid_prefetch_factor,
+                                     query_expander=query_expander)
+                if settings.reorder_context:
+                    retrieved = reorder_for_long_context(retrieved)
                 ans = generate_answer(s.question, retrieved, llm,
                                       persona=profile.persona,
-                                      refusal_text=profile.refusal_text)
+                                      refusal_text=profile.refusal_text,
+                                      inline_citations=settings.inline_citations)
                 rows.append(evaluate_sample(s, retrieved, ans, scorer,
                                             refusal_marker=profile.refusal_marker))
             results.append({

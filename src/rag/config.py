@@ -42,6 +42,14 @@ class Settings(BaseSettings):
     hybrid: bool = False
     hybrid_prefetch_factor: int = 5
 
+    # M11:多查询(默认关)
+    multi_query: bool = False
+    multi_query_n: int = 3
+    # M11:上下文排序(默认关)
+    reorder_context: bool = False
+    # M11:行内引用(默认关)
+    inline_citations: bool = False
+
     # 评估参数(M4 使用):生成层评分方法 keyword | llm_judge | semantic
     eval_scorer: str = "keyword"
 
