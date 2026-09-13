@@ -220,5 +220,432 @@
     "expected_sources": [],
     "expected_keywords": [],
     "expected_answer": ""
+  },
+  {
+    "question": "如何在FastAPI中声明异步路径操作函数?",
+    "expected_sources": [
+      "fastapi/async.md"
+    ],
+    "expected_keywords": [
+      "async",
+      "path",
+      "operations"
+    ],
+    "expected_answer": "@app.get(\"/\") async def read_results():\n    results = await some_async_library()\n    return results"
+  },
+  {
+    "question": "在异步代码中直接调用阻塞函数会有什么后果？",
+    "expected_sources": [
+      "fastapi/async.md"
+    ],
+    "expected_keywords": [
+      "异步代码",
+      "直接调用",
+      "阻塞函数",
+      "冻结",
+      "事件循环",
+      "其他请求"
+    ],
+    "expected_answer": "它将冻结事件循环并挂起其他请求"
+  },
+  {
+    "question": "在FastAPI中，为什么GET请求不建议携带body？",
+    "expected_sources": [
+      "fastapi/tutorial-body.md"
+    ],
+    "expected_keywords": [
+      "FastAPI",
+      "GET",
+      "body",
+      "undefined behavior"
+    ],
+    "expected_answer": "因为在规范中，发送带有body的GET请求具有未定义的行为，尽管FastAPI支持这种做法，仅限于非常复杂或极端的情况。"
+  },
+  {
+    "question": "什么是Depends(...)?",
+    "expected_sources": [
+      "fastapi/tutorial-dependencies.md"
+    ],
+    "expected_keywords": [
+      "Dependencies",
+      "函数或类"
+    ],
+    "expected_answer": "Dependencies可以是函数或类，并且可以嵌套。"
+  },
+  {
+    "question": "在FastAPI中如何处理客户端错误并返回自定义响应?",
+    "expected_sources": [
+      "fastapi/tutorial-handling-errors.md"
+    ],
+    "expected_keywords": [
+      "FastAPI",
+      "HTTPException",
+      "status_code"
+    ],
+    "expected_answer": "在FastAPI中，可以使用`HTTPException`来抛出异常以处理客户端错误。例如，在读取项目时如果项目不存在，则会抛出一个状态码为404的`HTTPException`，并返回包含错误详情的JSON响应。"
+  },
+  {
+    "question": "为什么需要确保路径/users/me在/users/{user_id}之前声明？",
+    "expected_sources": [
+      "fastapi/tutorial-path-params.md"
+    ],
+    "expected_keywords": [
+      "路径",
+      "顺序",
+      "匹配"
+    ],
+    "expected_answer": "因为路径操作是按顺序评估的，如果/users/{user_id}先于/users/me声明，它会错误地将/users/me视为包含user_id参数\"me\"的路径。"
+  },
+  {
+    "question": "在返回用户信息时，如何确保密码字段不被包含在响应中？",
+    "expected_sources": [
+      "fastapi/tutorial-response-model.md"
+    ],
+    "expected_keywords": [
+      "用户信息",
+      "密码字段",
+      "响应模型"
+    ],
+    "expected_answer": "通过定义不同的输入和输出模型，并在输出模型中排除不需要的字段。例如：class UserIn(BaseModel): username: str password: str email: str class UserOut(BaseModel): username: str email: str @app.post(\"/user/\", response_model=UserOut) async def create_user(user: UserIn): return user"
+  },
+  {
+    "question": "什么是`response_model`的作用？",
+    "expected_sources": [
+      "fastapi/tutorial-response-model.md"
+    ],
+    "expected_keywords": [
+      "controls",
+      "validates",
+      "documents",
+      "response",
+      "shape"
+    ],
+    "expected_answer": "`response_model`用于控制、验证和文档化响应的形状。"
+  },
+  {
+    "question": "在SQL中，哪些语句可以用来修改或删除数据库中的数据？请列举并简要说明它们的使用注意事项。",
+    "expected_sources": [
+      "mysql/crud.md"
+    ],
+    "expected_keywords": [
+      "SQL",
+      "修改",
+      "删除",
+      "UPDATE",
+      "DELETE"
+    ],
+    "expected_answer": "在SQL中，`UPDATE` 语句用于修改数据库中的数据，但必须包含 `WHERE` 子句以确保只更新特定条件的数据；`DELETE` 语句用于从表中删除数据，同样需要 `WHERE` 子句来指定要删除的行。如果不使用 `WHERE` 子句，`UPDATE` 和 `DELETE` 操作将影响或删除所有记录。"
+  },
+  {
+    "question": "在SQL中，用于分组聚合的语句是？",
+    "expected_sources": [
+      "mysql/crud.md"
+    ],
+    "expected_keywords": [
+      "aggregate",
+      "group"
+    ],
+    "expected_answer": "GROUP BY"
+  },
+  {
+    "question": "在SQL中，如何声明一个不允许为空且有默认值的列？",
+    "expected_sources": [
+      "mysql/data-types.md"
+    ],
+    "expected_keywords": [
+      "SQL",
+      "不允许为空",
+      "默认值"
+    ],
+    "expected_answer": "status VARCHAR(20) NOT NULL DEFAULT 'active'"
+  },
+  {
+    "question": "VARCHAR类型的最大长度是多少？",
+    "expected_sources": [
+      "mysql/data-types.md"
+    ],
+    "expected_keywords": [
+      "VARCHAR",
+      "字符"
+    ],
+    "expected_answer": "string up to `n` characters"
+  },
+  {
+    "question": "在创建users表时，哪些字段被定义为唯一标识符，并且如何实现这一特性？",
+    "expected_sources": [
+      "mysql/index.md"
+    ],
+    "expected_keywords": [
+      "users",
+      "唯一标识符",
+      "PRIMARY KEY"
+    ],
+    "expected_answer": "在创建users表时，id字段被定义为唯一标识符，通过使用 PRIMARY KEY 实现这一特性。"
+  },
+  {
+    "question": "什么是复合索引，并给出一个SQL示例？",
+    "expected_sources": [
+      "mysql/indexes.md"
+    ],
+    "expected_keywords": [
+      "复合索引",
+      "CREATE INDEX",
+      "users",
+      "name",
+      "created_at"
+    ],
+    "expected_answer": "复合索引可以在多个列上创建。例如：`CREATE INDEX idx_name_created ON users (name, created_at);`"
+  },
+  {
+    "question": "在大型表上如何使用索引提高查询性能？",
+    "expected_sources": [
+      "mysql/indexes.md"
+    ],
+    "expected_keywords": [
+      "索引",
+      "查询性能"
+    ],
+    "expected_answer": "通过在特定列上创建索引，MySQL可以跳过完整的表扫描而直接找到匹配的行。"
+  },
+  {
+    "question": "使用LEFT JOIN查询用户及其订单数量的SQL语句是什么？",
+    "expected_sources": [
+      "mysql/joins.md"
+    ],
+    "expected_keywords": [
+      "SQL",
+      "LEFT",
+      "JOIN",
+      "users",
+      "orders"
+    ],
+    "expected_answer": "SELECT users.name, COUNT(orders.id) AS order_count FROM users LEFT JOIN orders ON orders.user_id = users.id GROUP BY users.id"
+  },
+  {
+    "question": "在SQL中，LEFT JOIN如何工作？",
+    "expected_sources": [
+      "mysql/joins.md"
+    ],
+    "expected_keywords": [
+      "LEFT",
+      "JOIN",
+      "rows",
+      "left",
+      "table",
+      "right"
+    ],
+    "expected_answer": "LEFT JOIN返回左表的所有行，以及右表的匹配项（如果没有匹配项则为NULL）。"
+  },
+  {
+    "question": "什么是事务？在数据库操作中，事务有什么作用？",
+    "expected_sources": [
+      "mysql/transactions.md"
+    ],
+    "expected_keywords": [
+      "事务",
+      "SQL语句",
+      "单位",
+      "工作",
+      "保存",
+      "失败",
+      "回滚"
+    ],
+    "expected_answer": "事务是将多个SQL语句组合成一个整体的工作单元。如果所有语句都成功，则更改会被保存；如果有任何语句失败，那么所有的更改都会被撤销，就像没有发生过一样。"
+  },
+  {
+    "question": "什么是事务的原子性?",
+    "expected_sources": [
+      "mysql/transactions.md"
+    ],
+    "expected_keywords": [
+      "原子性",
+      "all statements happen or none do"
+    ],
+    "expected_answer": "所有语句要么全部执行，要么完全不执行"
+  },
+  {
+    "question": "在创建集合时，需要设置哪些固定参数？",
+    "expected_sources": [
+      "qdrant/collections.md"
+    ],
+    "expected_keywords": [
+      "创建",
+      "集合",
+      "固定参数",
+      "size",
+      "distance"
+    ],
+    "expected_answer": "在创建集合时，需要设置`size`和`distance`这两个固定参数。"
+  },
+  {
+    "question": "哪种距离度量在文本嵌入中通常是首选？",
+    "expected_sources": [
+      "qdrant/collections.md"
+    ],
+    "expected_keywords": [
+      "Cosine",
+      "文本"
+    ],
+    "expected_answer": "Cosine"
+  },
+  {
+    "question": "在Qdrant中如何使用过滤器进行筛选，并给出一个Python代码示例？",
+    "expected_sources": [
+      "qdrant/filtering.md"
+    ],
+    "expected_keywords": [
+      "Qdrant",
+      "payload filters",
+      "Filter",
+      "FieldCondition",
+      "MatchValue"
+    ],
+    "expected_answer": "在Qdrant中，可以结合向量相似性搜索与payload过滤器，通过`Filter`对象来实现。例如：\n```python\nfrom qdrant_client.models import Filter, FieldCondition, MatchValue\nresponse = client.query_points(\ncollection_name=\"my_docs\",\nquery=query_vector,\nlimit=4,\nquery_filter=Filter(\nmust=[FieldCondition(key=\"library\", match=MatchValue(value=\"fastapi\"))]\n),\n)\n```\n这将返回与`library == \"fastapi\"`匹配的最相似的4个点。"
+  },
+  {
+    "question": "在使用Qdrant进行查询时，如何通过过滤条件来限定搜索范围？",
+    "expected_sources": [
+      "qdrant/filtering.md"
+    ],
+    "expected_keywords": [
+      "Filter",
+      "must",
+      "must_not",
+      "Range"
+    ],
+    "expected_answer": "可以通过定义Filter对象，并结合`must`、`must_not`和`range`等条件来限定搜索范围。例如，使用`FieldCondition`指定字段匹配或不匹配特定值，或者通过`Range`指定数值字段的取值范围。"
+  },
+  {
+    "question": "Qdrant支持哪些距离度量标准？",
+    "expected_sources": [
+      "qdrant/index.md"
+    ],
+    "expected_keywords": [
+      "Qdrant",
+      "距离度量"
+    ],
+    "expected_answer": "Cosine, Dot, 或 Euclidean"
+  },
+  {
+    "question": "在向图数据库中插入点时，应该使用什么方法？",
+    "expected_sources": [
+      "qdrant/points.md"
+    ],
+    "expected_keywords": [
+      "插入",
+      "upsert"
+    ],
+    "expected_answer": "upsert"
+  },
+  {
+    "question": "如何使用Python代码通过id检索和删除文档集合中的点？",
+    "expected_sources": [
+      "qdrant/points.md"
+    ],
+    "expected_keywords": [
+      "Python",
+      "retrieve",
+      "delete",
+      "collection_name"
+    ],
+    "expected_answer": "使用`client.retrieve(collection_name=\"my_docs\", ids=[1, 2])`检索特定点，使用`client.delete(collection_name=\"my_docs\", points_selector=[1, 2])`删除指定id的点。"
+  },
+  {
+    "question": "在1.10+版本中，哪个方法取代了search()？",
+    "expected_sources": [
+      "qdrant/python-client.md"
+    ],
+    "expected_keywords": [
+      "1.10+",
+      "search()",
+      "query_points()"
+    ],
+    "expected_answer": "query_points()"
+  },
+  {
+    "question": "在RAG中，常见的`limit`参数范围是多少？",
+    "expected_sources": [
+      "qdrant/search.md"
+    ],
+    "expected_keywords": [
+      "RAG",
+      "limit",
+      "4–8"
+    ],
+    "expected_answer": "常见的范围是4–8"
+  },
+  {
+    "question": "如何正确使用qdrant-client进行查询操作？",
+    "expected_sources": [
+      "qdrant/search.md"
+    ],
+    "expected_keywords": [
+      "query_points",
+      "embedding model",
+      "limit"
+    ],
+    "expected_answer": "首先将查询文本转换为与摄入时使用的相同嵌入模型的向量，然后通过调用`query_points(...)`方法传递该向量。同时可以使用`limit`参数来控制返回的结果数量，以平衡召回率和噪声。"
+  },
+  {
+    "question": "FastAPI 里路径参数和查询参数有什么区别?",
+    "expected_sources": [
+      "fastapi/tutorial-path-params.md",
+      "fastapi/tutorial-query-params.md"
+    ],
+    "expected_keywords": [
+      "path parameter",
+      "query parameter"
+    ],
+    "expected_answer": "路径参数是 URL 路径的一部分(如 /items/{item_id});查询参数是路径之后 ? 后面的键值对,由函数中未出现在路径里、通常带默认值的参数声明。"
+  },
+  {
+    "question": "怎么同时接收路径参数、查询参数和请求体?",
+    "expected_sources": [
+      "fastapi/tutorial-path-params.md",
+      "fastapi/tutorial-query-params.md",
+      "fastapi/tutorial-body.md"
+    ],
+    "expected_keywords": [
+      "path",
+      "query",
+      "body"
+    ],
+    "expected_answer": "FastAPI 按声明自动区分:在路径中出现的作路径参数,简单类型且带默认值的作查询参数,Pydantic 模型作请求体,三者可同时出现在一个路径操作函数里。"
+  },
+  {
+    "question": "MySQL 里 JOIN 查询很慢,建索引能帮上忙吗?",
+    "expected_sources": [
+      "mysql/joins.md",
+      "mysql/indexes.md"
+    ],
+    "expected_keywords": [
+      "join",
+      "index"
+    ],
+    "expected_answer": "能。JOIN 按关联列匹配行,给参与连接的列(尤其外键)建索引可避免全表扫描、显著加速;可用 EXPLAIN 查看查询是否用到索引。"
+  },
+  {
+    "question": "Qdrant 创建集合时要选距离度量,检索返回的分数是怎么来的?",
+    "expected_sources": [
+      "qdrant/collections.md",
+      "qdrant/search.md"
+    ],
+    "expected_keywords": [
+      "distance",
+      "score"
+    ],
+    "expected_answer": "创建集合时指定距离度量(如 Cosine);检索时按该度量计算查询向量与各点的相似度,作为每个结果的 score 返回。"
+  },
+  {
+    "question": "Qdrant 怎么用 query_points 检索并按 payload 字段过滤?",
+    "expected_sources": [
+      "qdrant/search.md",
+      "qdrant/filtering.md"
+    ],
+    "expected_keywords": [
+      "query_points",
+      "filter"
+    ],
+    "expected_answer": "用 query_points 传入查询向量,并附带 query_filter(用 Filter 的 must/should/must_not 对 payload 字段设条件),即可在相似检索的同时按 payload 过滤。"
   }
 ]
