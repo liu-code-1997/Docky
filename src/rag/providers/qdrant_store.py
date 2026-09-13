@@ -6,15 +6,22 @@
 
 id 用确定性整数(对 chunk.id 做哈希)作为 Qdrant point id,
 原始字符串 id 与全部元数据存进 payload。
+
+M9: 使用命名向量 dense + sparse,支持 RRF 混合检索。
 """
 import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance, VectorParams, PointStruct,
     Filter, FieldCondition, MatchValue,
+    SparseVectorParams, SparseVector, Modifier,
+    Prefetch, FusionQuery, Fusion,
 )
 from rag.interfaces import VectorStore
 from rag.models import Chunk, RetrievedChunk
+
+DENSE = "dense"
+SPARSE = "sparse"
 
 
 def _point_id(chunk_id: str) -> str:
@@ -35,33 +42,59 @@ class QdrantStore(VectorStore):
         if not self.client.collection_exists(self.collection_name):
             self.client.create_collection(
                 collection_name=self.collection_name,
-                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+                vectors_config={DENSE: VectorParams(size=vector_size, distance=Distance.COSINE)},
+                sparse_vectors_config={SPARSE: SparseVectorParams(modifier=Modifier.IDF)},
             )
 
-    def upsert(self, chunks: list[Chunk], vectors: list[list[float]]) -> None:
-        points = [
-            PointStruct(
+    def upsert(self, chunks: list[Chunk], vectors: list[list[float]],
+               sparse_vectors: list[tuple[list[int], list[float]]] | None = None) -> None:
+        points = []
+        for i, (chunk, vec) in enumerate(zip(chunks, vectors)):
+            vector: dict = {DENSE: vec}
+            if sparse_vectors is not None:
+                idx, val = sparse_vectors[i]
+                vector[SPARSE] = SparseVector(indices=idx, values=val)
+            points.append(PointStruct(
                 id=_point_id(chunk.id),
                 vector=vector,
                 payload=chunk.model_dump(),
-            )
-            for chunk, vector in zip(chunks, vectors)
-        ]
+            ))
         self.client.upsert(collection_name=self.collection_name, points=points)
+
+    def _filter(self, library: str | None) -> Filter | None:
+        if library is None:
+            return None
+        return Filter(must=[FieldCondition(key="library", match=MatchValue(value=library))])
 
     def search(self, query_vector: list[float], top_k: int,
                library: str | None = None) -> list[RetrievedChunk]:
-        query_filter = None
-        if library is not None:
-            query_filter = Filter(must=[
-                FieldCondition(key="library", match=MatchValue(value=library))
-            ])
-        # 新版 qdrant-client(1.10+)用 query_points 取代已废弃的 search。
         response = self.client.query_points(
             collection_name=self.collection_name,
             query=query_vector,
+            using=DENSE,
             limit=top_k,
-            query_filter=query_filter,
+            query_filter=self._filter(library),
+        )
+        return [
+            RetrievedChunk(chunk=Chunk(**hit.payload), score=hit.score)
+            for hit in response.points
+        ]
+
+    def hybrid_search(self, query_vector: list[float],
+                      sparse_query: tuple[list[int], list[float]],
+                      top_k: int, library: str | None = None) -> list[RetrievedChunk]:
+        idx, val = sparse_query
+        qf = self._filter(library)
+        response = self.client.query_points(
+            collection_name=self.collection_name,
+            prefetch=[
+                Prefetch(query=query_vector, using=DENSE, limit=top_k * 5, filter=qf),
+                Prefetch(query=SparseVector(indices=idx, values=val), using=SPARSE,
+                         limit=top_k * 5, filter=qf),
+            ],
+            query=FusionQuery(fusion=Fusion.RRF),
+            limit=top_k,
+            query_filter=qf,
         )
         return [
             RetrievedChunk(chunk=Chunk(**hit.payload), score=hit.score)

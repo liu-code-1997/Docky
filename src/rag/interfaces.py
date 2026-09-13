@@ -25,8 +25,9 @@ class VectorStore(ABC):
         """确保集合存在(不存在则创建)。"""
 
     @abstractmethod
-    def upsert(self, chunks: list[Chunk], vectors: list[list[float]]) -> None:
-        """写入块及其向量。"""
+    def upsert(self, chunks: list[Chunk], vectors: list[list[float]],
+               sparse_vectors: list[tuple[list[int], list[float]]] | None = None) -> None:
+        """写入块及其稠密向量(可选稀疏向量)。"""
 
     @abstractmethod
     def search(self, query_vector: list[float], top_k: int,
@@ -40,6 +41,12 @@ class VectorStore(ABC):
     @abstractmethod
     def list_libraries(self) -> list[str]:
         """返回库中所有不同的 library 名(去重、排序)。"""
+
+    @abstractmethod
+    def hybrid_search(self, query_vector: list[float],
+                      sparse_query: tuple[list[int], list[float]],
+                      top_k: int, library: str | None = None) -> list[RetrievedChunk]:
+        """稠密+稀疏双路召回,RRF 融合取前 top_k。"""
 
 
 class LLM(ABC):
