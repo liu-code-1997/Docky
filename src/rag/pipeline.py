@@ -12,7 +12,9 @@ from rag.generate import answer as generate_answer
 class RagPipeline:
     def __init__(self, embedder: Embedder, store: VectorStore, llm: LLM,
                  top_k: int, rewriter: QueryRewriter | None = None,
-                 reranker: Reranker | None = None, rerank_factor: int = 5):
+                 reranker: Reranker | None = None, rerank_factor: int = 5,
+                 persona: str | None = None, refusal_text: str | None = None,
+                 query_prefix: str = ""):
         self.embedder = embedder
         self.store = store
         self.llm = llm
@@ -20,11 +22,17 @@ class RagPipeline:
         self.rewriter = rewriter    # M5②:非 None 时检索前改写查询
         self.reranker = reranker    # M5③:非 None 时检索后重排
         self.rerank_factor = rerank_factor
+        from rag.generate import _DEFAULT_PERSONA, _DEFAULT_REFUSAL
+        self.persona = persona if persona is not None else _DEFAULT_PERSONA
+        self.refusal_text = refusal_text if refusal_text is not None else _DEFAULT_REFUSAL
+        self.query_prefix = query_prefix
 
     def ask(self, question: str, library: str | None = None) -> Answer:
         """问题 → 检索 Top-K → 据资料生成带出处的答案。"""
         chunks = retrieve(question, self.embedder, self.store,
                           top_k=self.top_k, library=library,
                           rewriter=self.rewriter, reranker=self.reranker,
-                          rerank_factor=self.rerank_factor)
-        return generate_answer(question, chunks, self.llm)
+                          rerank_factor=self.rerank_factor,
+                          query_prefix=self.query_prefix)
+        return generate_answer(question, chunks, self.llm,
+                               persona=self.persona, refusal_text=self.refusal_text)

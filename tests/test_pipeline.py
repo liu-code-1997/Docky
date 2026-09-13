@@ -61,3 +61,24 @@ def test_ask_uses_rewriter_when_injected():
                        rewriter=_FakeRewriter())
     ans = pipe.ask("tell me about docs")
     assert ans.sources == ["fastapi/a.md"]
+
+
+def test_pipeline_threads_persona_into_generation():
+    from rag.pipeline import RagPipeline
+
+    class _CapLLM:
+        def __init__(self): self.seen = None
+        def generate(self, prompt): self.seen = prompt; return "答"
+
+    class _Emb:
+        def embed_one(self, t): return [0.0]
+        def embed(self, ts): return [[0.0] for _ in ts]
+
+    class _Store:
+        def search(self, v, top_k, library=None): return []
+
+    llm = _CapLLM()
+    p = RagPipeline(_Emb(), _Store(), llm, top_k=4,
+                    persona="你是保险顾问", refusal_text="资料没有")
+    p.ask("问题")
+    assert "你是保险顾问" in llm.seen

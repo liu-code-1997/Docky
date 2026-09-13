@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from rag.config import get_settings
+from rag.profile import load_profile
 from rag.providers.ollama_embedder import OllamaEmbedder
 from rag.providers.ollama_llm import OllamaLLM
 from rag.providers.qdrant_store import QdrantStore
@@ -43,6 +44,7 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = get_settings()
+    profile = load_profile(settings.profile)
     scorer_name = args.scorer or settings.eval_scorer
 
     embedder = OllamaEmbedder(settings.ollama_base_url, settings.embedding_model)
@@ -55,7 +57,7 @@ def main() -> None:
 
     # M5②:查询改写(命令行 --query-rewrite 可覆盖 config)
     use_rewrite = args.query_rewrite if args.query_rewrite is not None else settings.query_rewrite
-    rewriter = LlmQueryRewriter(llm) if use_rewrite else None
+    rewriter = LlmQueryRewriter(llm, profile.rewrite_prompt) if (use_rewrite and profile.rewrite_prompt) else None
 
     # M5③:重排(命令行 --rerank 可覆盖 config)
     use_rerank = args.rerank if args.rerank is not None else settings.rerank
@@ -67,9 +69,11 @@ def main() -> None:
         def retriever(query, library=None, top_k=settings.top_k):
             return retrieve(query, embedder, store, top_k=top_k, library=library,
                             rewriter=rewriter, reranker=reranker,
-                            rerank_factor=settings.rerank_factor)
+                            rerank_factor=settings.rerank_factor,
+                            query_prefix=profile.embed_query_prefix)
         agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
-                         top_k=settings.top_k, max_steps=settings.agent_max_steps)
+                         top_k=settings.top_k, max_steps=settings.agent_max_steps,
+                         persona=profile.persona, refusal_text=profile.refusal_text)
 
     data = json.loads(Path(args.dataset).read_text(encoding="utf-8"))
     samples = [EvalSample(**d) for d in data]
@@ -84,7 +88,7 @@ def main() -> None:
             # agent 内部自主检索;评估看生成分与拒答(检索命中在循环内,不单独计)
             ans = agent.ask(s.question, library=None)
             gen = scorer.score(ans.text, s)
-            refusal = "无法回答" in ans.text
+            refusal = profile.refusal_marker in ans.text
             negative = not s.expected_sources
             row = {"question": s.question, "negative": negative,
                    "refusal": refusal,
@@ -98,9 +102,13 @@ def main() -> None:
             retrieved = retrieve(s.question, embedder, store,
                                  top_k=settings.top_k, library=None,
                                  rewriter=rewriter, reranker=reranker,
-                                 rerank_factor=settings.rerank_factor)
-            ans = generate_answer(s.question, retrieved, llm)
-            r = evaluate_sample(s, retrieved, ans, scorer)
+                                 rerank_factor=settings.rerank_factor,
+                                 query_prefix=profile.embed_query_prefix)
+            ans = generate_answer(s.question, retrieved, llm,
+                                  persona=profile.persona,
+                                  refusal_text=profile.refusal_text)
+            r = evaluate_sample(s, retrieved, ans, scorer,
+                                refusal_marker=profile.refusal_marker)
             rows.append(r)
             if r["negative"]:
                 print(f"[neg] {'拒答✓' if r['refusal_correct'] else '误答✗'}  {s.question}")

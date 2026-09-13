@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from rag.config import get_settings
+from rag.profile import load_profile
 from rag.providers.ollama_embedder import OllamaEmbedder
 from rag.providers.ollama_llm import OllamaLLM
 from rag.providers.qdrant_store import QdrantStore
@@ -31,6 +32,7 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = get_settings()
+    profile = load_profile(settings.profile)
     scorer_name = args.scorer or settings.eval_scorer
     embedder = OllamaEmbedder(settings.ollama_base_url, settings.embedding_model)
     llm = OllamaLLM(settings.ollama_base_url, settings.llm_model,
@@ -44,16 +46,20 @@ def main() -> None:
     results = []
     for use_rewrite in (False, True):
         for use_rerank in (False, True):
-            rewriter = LlmQueryRewriter(llm) if use_rewrite else None
+            rewriter = LlmQueryRewriter(llm, profile.rewrite_prompt) if (use_rewrite and profile.rewrite_prompt) else None
             reranker = LlmReranker(llm) if use_rerank else None
             rows = []
             for s in samples:
                 retrieved = retrieve(s.question, embedder, store,
                                      top_k=settings.top_k, library=None,
                                      rewriter=rewriter, reranker=reranker,
-                                     rerank_factor=settings.rerank_factor)
-                ans = generate_answer(s.question, retrieved, llm)
-                rows.append(evaluate_sample(s, retrieved, ans, scorer))
+                                     rerank_factor=settings.rerank_factor,
+                                     query_prefix=profile.embed_query_prefix)
+                ans = generate_answer(s.question, retrieved, llm,
+                                      persona=profile.persona,
+                                      refusal_text=profile.refusal_text)
+                rows.append(evaluate_sample(s, retrieved, ans, scorer,
+                                            refusal_marker=profile.refusal_marker))
             results.append({
                 "config": f"rewrite={'on' if use_rewrite else 'off'} "
                           f"rerank={'on' if use_rerank else 'off'}",

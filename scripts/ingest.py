@@ -5,6 +5,7 @@
 """
 from pathlib import Path
 from rag.config import get_settings
+from rag.profile import load_profile
 from rag.providers.ollama_embedder import OllamaEmbedder
 from rag.providers.qdrant_store import QdrantStore
 from rag.ingest import ingest_directory
@@ -12,6 +13,7 @@ from rag.ingest import ingest_directory
 
 def main() -> None:
     settings = get_settings()
+    profile = load_profile(settings.profile)
     docs_dir = Path(__file__).resolve().parent.parent / "docs"
 
     embedder = OllamaEmbedder(settings.ollama_base_url, settings.embedding_model)
@@ -31,6 +33,8 @@ def main() -> None:
         overlap=settings.chunk_overlap,
         vector_size=vector_size,
         strategy=settings.chunk_strategy,
+        noise_markers=profile.noise_markers,
+        doc_prefix=profile.embed_doc_prefix,
     )
     print(f"✅ 已入库 {n} 个块(切分策略={settings.chunk_strategy}),Qdrant 当前共 {store.count()} 条。")
 

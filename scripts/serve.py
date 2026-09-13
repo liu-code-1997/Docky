@@ -11,6 +11,7 @@ import argparse
 import uvicorn
 
 from rag.config import get_settings
+from rag.profile import load_profile
 from rag.providers.ollama_embedder import OllamaEmbedder
 from rag.providers.ollama_llm import OllamaLLM
 from rag.providers.qdrant_store import QdrantStore
@@ -26,25 +27,30 @@ from rag.api import create_app
 def build_app():
     """装配真实 provider 并返回 FastAPI app —— 选用哪个实现的决定只在这里。"""
     settings = get_settings()
+    profile = load_profile(settings.profile)
     embedder = OllamaEmbedder(settings.ollama_base_url, settings.embedding_model)
     llm = OllamaLLM(settings.ollama_base_url, settings.llm_model,
                     temperature=settings.llm_temperature)
     store = QdrantStore(collection_name=settings.collection_name,
                         url=settings.qdrant_url)
-    rewriter = LlmQueryRewriter(llm) if settings.query_rewrite else None
+    rewriter = LlmQueryRewriter(llm, profile.rewrite_prompt) if (settings.query_rewrite and profile.rewrite_prompt) else None
     reranker = LlmReranker(llm) if settings.rerank else None
     pipeline = RagPipeline(embedder, store, llm, top_k=settings.top_k,
                            rewriter=rewriter, reranker=reranker,
-                           rerank_factor=settings.rerank_factor)
+                           rerank_factor=settings.rerank_factor,
+                           persona=profile.persona, refusal_text=profile.refusal_text,
+                           query_prefix=profile.embed_query_prefix)
 
     # M6:装配 agent —— retriever 回调复用现有 retrieve 链路(含改写/重排)
     def retriever(query, library=None, top_k=settings.top_k):
         return retrieve(query, embedder, store, top_k=top_k, library=library,
                         rewriter=rewriter, reranker=reranker,
-                        rerank_factor=settings.rerank_factor)
+                        rerank_factor=settings.rerank_factor,
+                        query_prefix=profile.embed_query_prefix)
 
     agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
-                     top_k=settings.top_k, max_steps=settings.agent_max_steps)
+                     top_k=settings.top_k, max_steps=settings.agent_max_steps,
+                     persona=profile.persona, refusal_text=profile.refusal_text)
 
     return create_app(pipeline, store, agent=agent)
 
