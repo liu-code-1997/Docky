@@ -1,6 +1,6 @@
 from rag.interfaces import LLM
 from rag.models import Chunk, RetrievedChunk
-from rag.rerank import LlmReranker
+from rag.rerank import LlmReranker, ListwiseLlmReranker, build_reranker
 
 
 class _ScriptLLM(LLM):
@@ -59,3 +59,47 @@ def test_rerank_handles_unparseable_score_as_zero():
 def test_rerank_empty_candidates():
     reranker = LlmReranker(_ScriptLLM({}))
     assert reranker.rerank("q", [], top_k=4) == []
+
+
+def _rc_listwise(cid, text="t"):
+    return RetrievedChunk(chunk=Chunk(id=cid, text=text, source=f"{cid}.md",
+                                      library="l", chunk_index=0), score=1.0)
+
+
+class _FakeLLM:
+    def __init__(self, reply): self.reply = reply
+    def generate(self, prompt): return self.reply
+
+
+def test_listwise_reorders_by_llm_output():
+    cands = [_rc_listwise("a"), _rc_listwise("b"), _rc_listwise("c")]
+    r = ListwiseLlmReranker(_FakeLLM("2,3,1"))
+    out = r.rerank("q", cands, top_k=3)
+    assert [c.chunk.source for c in out] == ["b.md", "c.md", "a.md"]
+
+
+def test_listwise_appends_unmentioned_and_truncates():
+    cands = [_rc_listwise("a"), _rc_listwise("b"), _rc_listwise("c")]
+    r = ListwiseLlmReranker(_FakeLLM("3"))          # 只提到 c
+    out = r.rerank("q", cands, top_k=2)
+    assert out[0].chunk.source == "c.md"            # 提到的在前
+    assert len(out) == 2                             # 其余按原序补,截断到 top_k
+
+
+def test_listwise_unparseable_falls_back_to_original_order():
+    cands = [_rc_listwise("a"), _rc_listwise("b")]
+    r = ListwiseLlmReranker(_FakeLLM("乱码没有数字"))
+    out = r.rerank("q", cands, top_k=2)
+    assert [c.chunk.source for c in out] == ["a.md", "b.md"]
+
+
+def test_listwise_empty():
+    assert ListwiseLlmReranker(_FakeLLM("")).rerank("q", [], top_k=4) == []
+
+
+def test_build_reranker_dispatch():
+    assert isinstance(build_reranker("llm_listwise", _FakeLLM("")), ListwiseLlmReranker)
+    assert isinstance(build_reranker("llm_pointwise", _FakeLLM("")), LlmReranker)
+    import pytest
+    with pytest.raises(ValueError):
+        build_reranker("nope", _FakeLLM(""))

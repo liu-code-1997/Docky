@@ -36,3 +36,53 @@ class LlmReranker(Reranker):
         # 按 LLM 相关性分降序;稳定排序保留原相对次序作为平手时的兜底
         scored.sort(key=lambda t: t[0], reverse=True)
         return [rc for _, rc in scored[:top_k]]
+
+
+_LISTWISE_PROMPT = """下面是若干候选资料,请按与【问题】的相关性从高到低排序。
+只输出候选编号,用逗号分隔(如 3,1,4,2),不要解释、不要输出其它内容。
+
+【问题】{question}
+
+{candidates}
+排序:"""
+
+
+def _parse_order(reply: str, n: int) -> list[int]:
+    seen: set[int] = set()
+    order: list[int] = []
+    for tok in re.findall(r"\d+", reply):
+        i = int(tok)
+        if 1 <= i <= n and i not in seen:
+            seen.add(i)
+            order.append(i)
+    return order
+
+
+class ListwiseLlmReranker(Reranker):
+    """一次 LLM 调用对全部候选排序(比逐条打分快,零新依赖)。"""
+
+    def __init__(self, llm: LLM):
+        self.llm = llm
+
+    def rerank(self, question: str, candidates: list[RetrievedChunk],
+               top_k: int) -> list[RetrievedChunk]:
+        if not candidates:
+            return []
+        blocks = "\n".join(f"[{i}] {rc.chunk.text[:300]}"
+                           for i, rc in enumerate(candidates, start=1))
+        reply = self.llm.generate(
+            _LISTWISE_PROMPT.format(question=question, candidates=blocks))
+        order = _parse_order(reply, len(candidates))
+        seen = set(order)
+        order += [i for i in range(1, len(candidates) + 1) if i not in seen]  # 未提及者补末尾
+        ranked = [candidates[i - 1] for i in order]
+        return ranked[:top_k]
+
+
+def build_reranker(provider: str, llm: LLM) -> Reranker:
+    """按名字构造重排器。将来接 bge cross-encoder 只需加一分支。"""
+    if provider == "llm_listwise":
+        return ListwiseLlmReranker(llm)
+    if provider == "llm_pointwise":
+        return LlmReranker(llm)
+    raise ValueError(f"未知 rerank_provider: {provider}(可选 llm_listwise | llm_pointwise)")

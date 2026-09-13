@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     # 重排(M5 ③):开启后先召回 top_k×rerank_factor 候选,用 LLM 重排取前 top_k
     rerank: bool = False
     rerank_factor: int = 5
+    rerank_provider: str = "llm_listwise"
 
     # 检索参数(M2 使用)
     top_k: int = 4
