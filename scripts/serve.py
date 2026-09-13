@@ -40,7 +40,8 @@ def build_app():
                            rerank_factor=settings.rerank_factor,
                            persona=profile.persona, refusal_text=profile.refusal_text,
                            query_prefix=profile.embed_query_prefix,
-                           hybrid=settings.hybrid)
+                           hybrid=settings.hybrid,
+                           hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
 
     # M6:装配 agent —— retriever 回调复用现有 retrieve 链路(含改写/重排)
     def retriever(query, library=None, top_k=settings.top_k):
@@ -48,7 +49,8 @@ def build_app():
                         rewriter=rewriter, reranker=reranker,
                         rerank_factor=settings.rerank_factor,
                         query_prefix=profile.embed_query_prefix,
-                        hybrid=settings.hybrid)
+                        hybrid=settings.hybrid,
+                        hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
 
     agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
                      top_k=settings.top_k, max_steps=settings.agent_max_steps,

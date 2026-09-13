@@ -71,7 +71,8 @@ def main() -> None:
                             rewriter=rewriter, reranker=reranker,
                             rerank_factor=settings.rerank_factor,
                             query_prefix=profile.embed_query_prefix,
-                            hybrid=settings.hybrid)
+                            hybrid=settings.hybrid,
+                            hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
         agent = RagAgent(llm=build_chat_llm(settings), retriever=retriever,
                          top_k=settings.top_k, max_steps=settings.agent_max_steps,
                          persona=profile.persona, refusal_text=profile.refusal_text)
@@ -105,7 +106,8 @@ def main() -> None:
                                  rewriter=rewriter, reranker=reranker,
                                  rerank_factor=settings.rerank_factor,
                                  query_prefix=profile.embed_query_prefix,
-                                 hybrid=settings.hybrid)
+                                 hybrid=settings.hybrid,
+                                 hybrid_prefetch_factor=settings.hybrid_prefetch_factor)
             ans = generate_answer(s.question, retrieved, llm,
                                   persona=profile.persona,
                                   refusal_text=profile.refusal_text)

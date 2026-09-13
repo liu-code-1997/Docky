@@ -14,13 +14,15 @@ def retrieve(question: str, embedder: Embedder, store: VectorStore,
              reranker: Reranker | None = None,
              rerank_factor: int = 5,
              query_prefix: str = "",
-             hybrid: bool = False) -> list[RetrievedChunk]:
+             hybrid: bool = False,
+             hybrid_prefetch_factor: int = 5) -> list[RetrievedChunk]:
     """把问题向量化后,去向量库检索最相近的 top_k 块。
 
     - rewriter(M5②):非 None 时先改写查询再向量化,缓解跨语言检索。
     - reranker(M5③):非 None 时先召回 top_k×rerank_factor 个候选,再重排取前 top_k。
     - query_prefix(M8):在向量化前拼接到查询文本,默认空串。
     - hybrid(M9):True 时使用混合检索(稀疏+密集),False 时仅密集检索。
+    - hybrid_prefetch_factor(M9):每路 Prefetch 召回 top_k×factor 个候选,默认 5。
     """
     query = rewriter.rewrite(question) if rewriter is not None else question
     query_vector = embedder.embed_one(query_prefix + query)
@@ -30,7 +32,8 @@ def retrieve(question: str, embedder: Embedder, store: VectorStore,
 
     if hybrid:
         hits = store.hybrid_search(query_vector, encode_sparse(query),
-                                   top_k=recall_k, library=library)
+                                   top_k=recall_k, library=library,
+                                   prefetch_factor=hybrid_prefetch_factor)
     else:
         hits = store.search(query_vector, top_k=recall_k, library=library)
 

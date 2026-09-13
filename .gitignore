@@ -9,3 +9,4 @@ qdrant_storage/
 *.egg-info/
 .idea/
 .vscode/
+eval/candidates.json

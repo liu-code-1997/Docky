@@ -82,15 +82,16 @@ class QdrantStore(VectorStore):
 
     def hybrid_search(self, query_vector: list[float],
                       sparse_query: tuple[list[int], list[float]],
-                      top_k: int, library: str | None = None) -> list[RetrievedChunk]:
+                      top_k: int, library: str | None = None,
+                      prefetch_factor: int = 5) -> list[RetrievedChunk]:
         idx, val = sparse_query
         qf = self._filter(library)
         response = self.client.query_points(
             collection_name=self.collection_name,
             prefetch=[
-                Prefetch(query=query_vector, using=DENSE, limit=top_k * 5, filter=qf),
+                Prefetch(query=query_vector, using=DENSE, limit=top_k * prefetch_factor, filter=qf),
                 Prefetch(query=SparseVector(indices=idx, values=val), using=SPARSE,
-                         limit=top_k * 5, filter=qf),
+                         limit=top_k * prefetch_factor, filter=qf),
             ],
             query=FusionQuery(fusion=Fusion.RRF),
             limit=top_k,

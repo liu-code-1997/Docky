@@ -123,7 +123,7 @@ def test_retrieve_hybrid_uses_hybrid_search_with_sparse_from_query():
     class _Store:
         def __init__(self): self.called = None
         def search(self, *a, **k): self.called = ("dense", a, k); return []
-        def hybrid_search(self, qv, sparse, top_k, library=None):
+        def hybrid_search(self, qv, sparse, top_k, library=None, prefetch_factor=5):
             self.called = ("hybrid", sparse); return []
 
     st = _Store()
@@ -131,3 +131,22 @@ def test_retrieve_hybrid_uses_hybrid_search_with_sparse_from_query():
     assert st.called[0] == "hybrid"
     idx, val = st.called[1]
     assert len(idx) == len(val) > 0              # 稀疏向量来自 query 文本
+
+
+def test_retrieve_passes_hybrid_prefetch_factor_to_hybrid_search():
+    """retrieve 应把 hybrid_prefetch_factor 透传给 store.hybrid_search。"""
+    from rag.retrieve import retrieve
+
+    class _Emb:
+        def embed_one(self, t): return [0.0]
+
+    class _CapStore:
+        """记录收到的 prefetch_factor 值。"""
+        def __init__(self): self.received_factor = None
+        def hybrid_search(self, qv, sparse, top_k, library=None, prefetch_factor=5):
+            self.received_factor = prefetch_factor
+            return []
+
+    st = _CapStore()
+    retrieve("query", _Emb(), st, top_k=4, hybrid=True, hybrid_prefetch_factor=10)
+    assert st.received_factor == 10  # 非默认值 10 被正确透传
