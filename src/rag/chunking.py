@@ -33,7 +33,7 @@ def chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
 # ---- M5 ①:markdown 结构切分 + 噪声过滤 ----
 
 # 噪声段特征:命中任一即视为营销/导航噪声,丢弃(小写匹配)。
-_NOISE_MARKERS = (
+_DEFAULT_NOISE_MARKERS = (
     "sponsor",
     "fastapi cloud",
     "conf",            # FastAPI Conf 会议海报
@@ -42,10 +42,11 @@ _NOISE_MARKERS = (
 )
 
 
-def is_noise(heading: str, body: str) -> bool:
+def is_noise(heading: str, body: str,
+             noise_markers: tuple[str, ...] | list[str] = _DEFAULT_NOISE_MARKERS) -> bool:
     """标题或正文命中噪声特征则判为噪声段。"""
     blob = f"{heading}\n{body}".lower()
-    return any(marker in blob for marker in _NOISE_MARKERS)
+    return any(marker in blob for marker in noise_markers)
 
 
 def _strip_anchor(title: str) -> str:
@@ -77,7 +78,8 @@ def _is_html_boilerplate(body: str) -> bool:
     return (len(tags) + len(imgs)) * 12 > len(prose)
 
 
-def chunk_markdown(text: str, chunk_size: int, overlap: int) -> list[str]:
+def chunk_markdown(text: str, chunk_size: int, overlap: int,
+                   noise_markers: tuple[str, ...] | list[str] = _DEFAULT_NOISE_MARKERS) -> list[str]:
     """按 markdown 标题切分正文块,并过滤噪声/样板段。
 
     与 chunk_text(按字符硬切)相比,这里尊重文档结构:
@@ -99,7 +101,7 @@ def chunk_markdown(text: str, chunk_size: int, overlap: int) -> list[str]:
         body = "\n".join(cur_body).strip()
         if not body:
             return
-        if is_noise(cur_heading, body) or _is_html_boilerplate(body):
+        if is_noise(cur_heading, body, noise_markers) or _is_html_boilerplate(body):
             return
         # 不加标题前缀:正文若超长,按字符窗口切
         pieces = [body] if len(body) <= chunk_size else chunk_text(body, chunk_size, overlap)

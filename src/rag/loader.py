@@ -5,11 +5,12 @@
 """
 from pathlib import Path
 from rag.models import Chunk
-from rag.chunking import chunk_text, chunk_markdown
+from rag.chunking import chunk_text, chunk_markdown, _DEFAULT_NOISE_MARKERS
 
 
 def load_chunks_from_dir(docs_dir: Path, chunk_size: int, overlap: int,
-                         strategy: str = "char") -> list[Chunk]:
+                         strategy: str = "char",
+                         noise_markers: tuple[str, ...] | list[str] = _DEFAULT_NOISE_MARKERS) -> list[Chunk]:
     docs_dir = Path(docs_dir)
     chunks: list[Chunk] = []
 
@@ -21,7 +22,8 @@ def load_chunks_from_dir(docs_dir: Path, chunk_size: int, overlap: int,
 
         text = md_path.read_text(encoding="utf-8")
         if strategy == "markdown":
-            pieces = chunk_markdown(text, chunk_size=chunk_size, overlap=overlap)
+            pieces = chunk_markdown(text, chunk_size=chunk_size, overlap=overlap,
+                                    noise_markers=noise_markers)
         else:
             pieces = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
         for i, piece in enumerate(pieces):

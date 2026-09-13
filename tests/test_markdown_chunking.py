@@ -96,3 +96,13 @@ def test_chunk_markdown_keeps_prose_with_inline_code_and_links():
     text = "## Body\n\n用 `Pydantic` 的 [BaseModel](https://x) 定义请求体,声明字段类型即可完成校验。\n"
     chunks = chunk_markdown(text, 800, 0)
     assert any("Pydantic" in c for c in chunks)
+
+
+def test_chunk_markdown_uses_injected_noise_markers():
+    text = "# 广告位\n买保险找我们\n\n# 正文\n这是有用的内容。"
+    # 用自定义噪声词过滤"广告位"段;默认的 FastAPI 词此处不该生效
+    chunks = chunk_markdown(text, chunk_size=800, overlap=0,
+                            noise_markers=["广告位", "买保险"])
+    joined = "\n".join(chunks)
+    assert "有用的内容" in joined
+    assert "买保险找我们" not in joined
