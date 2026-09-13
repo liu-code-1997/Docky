@@ -113,3 +113,21 @@ def test_retrieve_prepends_query_prefix():
     emb = _CapEmbedder()
     retrieve("路径参数", emb, _EmptyStore(), top_k=4, query_prefix="search_query: ")
     assert emb.seen == "search_query: 路径参数"
+
+
+def test_retrieve_hybrid_uses_hybrid_search_with_sparse_from_query():
+    from rag.retrieve import retrieve
+
+    class _Emb:
+        def embed_one(self, t): return [0.0]
+    class _Store:
+        def __init__(self): self.called = None
+        def search(self, *a, **k): self.called = ("dense", a, k); return []
+        def hybrid_search(self, qv, sparse, top_k, library=None):
+            self.called = ("hybrid", sparse); return []
+
+    st = _Store()
+    retrieve("LEFT JOIN 慢", _Emb(), st, top_k=4, hybrid=True)
+    assert st.called[0] == "hybrid"
+    idx, val = st.called[1]
+    assert len(idx) == len(val) > 0              # 稀疏向量来自 query 文本

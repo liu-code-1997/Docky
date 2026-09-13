@@ -5,6 +5,7 @@
 """
 from rag.interfaces import Embedder, VectorStore, QueryRewriter, Reranker
 from rag.models import RetrievedChunk
+from rag.sparse import encode_sparse
 
 
 def retrieve(question: str, embedder: Embedder, store: VectorStore,
@@ -12,19 +13,26 @@ def retrieve(question: str, embedder: Embedder, store: VectorStore,
              rewriter: QueryRewriter | None = None,
              reranker: Reranker | None = None,
              rerank_factor: int = 5,
-             query_prefix: str = "") -> list[RetrievedChunk]:
+             query_prefix: str = "",
+             hybrid: bool = False) -> list[RetrievedChunk]:
     """把问题向量化后,去向量库检索最相近的 top_k 块。
 
     - rewriter(M5②):非 None 时先改写查询再向量化,缓解跨语言检索。
     - reranker(M5③):非 None 时先召回 top_k×rerank_factor 个候选,再重排取前 top_k。
     - query_prefix(M8):在向量化前拼接到查询文本,默认空串。
+    - hybrid(M9):True 时使用混合检索(稀疏+密集),False 时仅密集检索。
     """
     query = rewriter.rewrite(question) if rewriter is not None else question
     query_vector = embedder.embed_one(query_prefix + query)
 
     # 有重排器时多召回一些候选,交给重排器筛选
     recall_k = top_k * rerank_factor if reranker is not None else top_k
-    hits = store.search(query_vector, top_k=recall_k, library=library)
+
+    if hybrid:
+        hits = store.hybrid_search(query_vector, encode_sparse(query),
+                                   top_k=recall_k, library=library)
+    else:
+        hits = store.search(query_vector, top_k=recall_k, library=library)
 
     if reranker is not None:
         return reranker.rerank(question, hits, top_k=top_k)
