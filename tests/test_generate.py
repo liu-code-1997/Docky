@@ -80,3 +80,13 @@ def test_build_prompt_defaults_preserve_current_behavior():
     prompt = build_prompt("问题", [_rc_simple()])
     assert "技术文档问答助手" in prompt
     assert "根据现有资料无法回答" in prompt
+
+
+def test_inline_citations_adds_instruction():
+    p = build_prompt("q", [_rc_simple()], inline_citations=True)
+    assert "[1]" in p or "编号" in p           # 含引用标注指令
+
+
+def test_inline_citations_off_by_default():
+    p = build_prompt("q", [_rc_simple()])
+    assert "标注" not in p                     # 默认不加引用指令

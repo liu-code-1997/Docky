@@ -15,15 +15,20 @@ _DEFAULT_REFUSAL = "根据现有资料无法回答"
 
 def build_prompt(question: str, chunks: list[RetrievedChunk],
                  persona: str = _DEFAULT_PERSONA,
-                 refusal_text: str = _DEFAULT_REFUSAL) -> str:
+                 refusal_text: str = _DEFAULT_REFUSAL,
+                 inline_citations: bool = False) -> str:
     """把 Top-K 资料与问题组装成给 LLM 的完整 prompt。"""
+    cite_rule = (
+        "\n4. 引用了哪段【资料】,就在该句末尾用其编号标注,如 [1]、[2]。"
+        if inline_citations else ""
+    )
     system = (
         f"{persona}。请遵守以下规则:\n"
         f"1. 依据下面【资料】中的内容回答问题;只要资料里有相关信息,就据此作答,"
         f"不必因为信息不够完整就拒答。\n"
         f"2. 仅当【资料】与问题完全无关、找不到任何可用信息时,才回答\"{refusal_text}\";"
         f"任何情况下都不要编造、不要用资料之外的常识补充。\n"
-        f"3. 回答尽量简洁、准确,可引用资料中的术语。"
+        f"3. 回答尽量简洁、准确,可引用资料中的术语。{cite_rule}"
     )
     if chunks:
         blocks = [f"[资料{i} | 来源:{rc.chunk.source}]\n{rc.chunk.text}"
@@ -36,9 +41,10 @@ def build_prompt(question: str, chunks: list[RetrievedChunk],
 
 def answer(question: str, chunks: list[RetrievedChunk], llm: LLM,
            persona: str = _DEFAULT_PERSONA,
-           refusal_text: str = _DEFAULT_REFUSAL) -> Answer:
+           refusal_text: str = _DEFAULT_REFUSAL,
+           inline_citations: bool = False) -> Answer:
     """生成答案,并附上去重(保序)后的来源列表。"""
-    prompt = build_prompt(question, chunks, persona, refusal_text)
+    prompt = build_prompt(question, chunks, persona, refusal_text, inline_citations)
     text = llm.generate(prompt)
 
     sources: list[str] = []
