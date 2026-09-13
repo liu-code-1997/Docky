@@ -60,6 +60,11 @@ def test_is_refusal_detects_cannot_answer():
     assert is_refusal("路径参数用花括号声明。") is False
 
 
+def test_is_refusal_uses_injected_marker():
+    assert is_refusal("这条资料没有", marker="资料没有") is True
+    assert is_refusal("这条资料没有", marker="无法回答") is False
+
+
 class _FixedScorer:
     def score(self, answer_text, sample):
         return 1.0

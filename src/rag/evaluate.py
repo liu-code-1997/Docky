@@ -4,7 +4,7 @@ import math
 from rag.interfaces import AnswerScorer
 from rag.models import Answer, EvalSample, RetrievedChunk
 
-_REFUSAL_MARKER = "无法回答"
+_DEFAULT_REFUSAL_MARKER = "无法回答"
 
 
 def _relevance_flags(expected_sources: list[str],
@@ -68,16 +68,17 @@ def ndcg_at_k(expected_sources: list[str],
     return dcg / idcg
 
 
-def is_refusal(answer_text: str) -> bool:
+def is_refusal(answer_text: str, marker: str = _DEFAULT_REFUSAL_MARKER) -> bool:
     """答案是否为拒答。"""
-    return _REFUSAL_MARKER in answer_text
+    return marker in answer_text
 
 
 def evaluate_sample(sample: EvalSample, retrieved: list[RetrievedChunk],
-                    answer: Answer, scorer: AnswerScorer) -> dict:
+                    answer: Answer, scorer: AnswerScorer,
+                    refusal_marker: str = _DEFAULT_REFUSAL_MARKER) -> dict:
     """评估一条:正例算排序指标+生成分,负例只算拒答正确性。"""
     negative = not sample.expected_sources
-    refusal = is_refusal(answer.text)
+    refusal = is_refusal(answer.text, refusal_marker)
     row: dict = {
         "question": sample.question,
         "negative": negative,
