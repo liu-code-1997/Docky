@@ -23,11 +23,17 @@ def test_ignores_non_markdown_files(tmp_path: Path):
     lib = tmp_path / "fastapi"
     lib.mkdir()
     (lib / "a.md").write_text("hello world", encoding="utf-8")
-    (lib / "b.txt").write_text("ignore me", encoding="utf-8")
+    (lib / "b.txt").write_text("text content", encoding="utf-8")
+    (lib / "c.unknown").write_text("unsupported", encoding="utf-8")
 
     chunks = load_chunks_from_dir(tmp_path, chunk_size=200, overlap=50)
-    assert all(c.source.endswith(".md") for c in chunks)
-    assert len(chunks) == 1
+    srcs = {c.source for c in chunks}
+    # Supported files (.md, .txt) should be loaded
+    assert "fastapi/a.md" in srcs
+    assert "fastapi/b.txt" in srcs
+    # Unsupported files (.unknown) should be ignored
+    assert "fastapi/c.unknown" not in srcs
+    assert len(chunks) == 2
 
 
 def test_markdown_strategy_filters_noise_and_keeps_headings(tmp_path: Path):
@@ -50,3 +56,16 @@ def test_markdown_strategy_filters_noise_and_keeps_headings(tmp_path: Path):
     assert any("花括号" in t for t in texts)
     # 元数据仍完整
     assert all(c.library == "fastapi" and c.source == "fastapi/doc.md" for c in chunks)
+
+
+def test_loader_handles_mixed_formats(tmp_path):
+    from rag.loader import load_chunks_from_dir
+    lib = tmp_path / "lib"; lib.mkdir()
+    (lib / "a.md").write_text("# H\nmarkdown body", encoding="utf-8")
+    (lib / "b.txt").write_text("plain text body", encoding="utf-8")
+    (lib / "c.html").write_text("<body><p>html body content</p></body>", encoding="utf-8")
+    chunks = load_chunks_from_dir(tmp_path, chunk_size=800, overlap=0)
+    srcs = {c.source for c in chunks}
+    assert {"lib/a.md", "lib/b.txt", "lib/c.html"} <= srcs
+    assert all(c.library == "lib" for c in chunks)
+    assert any("html body content" in c.text for c in chunks)
