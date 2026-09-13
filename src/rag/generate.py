@@ -18,10 +18,11 @@ def build_prompt(question: str, chunks: list[RetrievedChunk],
                  refusal_text: str = _DEFAULT_REFUSAL) -> str:
     """把 Top-K 资料与问题组装成给 LLM 的完整 prompt。"""
     system = (
-        f"{persona}。请严格遵守以下规则:\n"
-        f"1. 只能依据下面【资料】中的内容回答问题。\n"
-        f"2. 如果【资料】中没有足够信息回答,必须回答\"{refusal_text}\","
-        f"不要编造、不要凭常识补充。\n"
+        f"{persona}。请遵守以下规则:\n"
+        f"1. 依据下面【资料】中的内容回答问题;只要资料里有相关信息,就据此作答,"
+        f"不必因为信息不够完整就拒答。\n"
+        f"2. 仅当【资料】与问题完全无关、找不到任何可用信息时,才回答\"{refusal_text}\";"
+        f"任何情况下都不要编造、不要用资料之外的常识补充。\n"
         f"3. 回答尽量简洁、准确,可引用资料中的术语。"
     )
     if chunks:
