@@ -103,3 +103,34 @@ def test_build_reranker_dispatch():
     import pytest
     with pytest.raises(ValueError):
         build_reranker("nope", _FakeLLM(""))
+
+
+def _rc_cross(cid, text="t"):
+    """为 cross_encoder 测试创建 RetrievedChunk,source 带 id 后缀。"""
+    return RetrievedChunk(chunk=Chunk(id=cid, text=text, source=f"{cid}.md",
+                                      library="l", chunk_index=0), score=1.0)
+
+
+def test_cross_encoder_reranks_by_injected_scorer():
+    from rag.rerank import CrossEncoderReranker
+    cands = [_rc_cross("a"), _rc_cross("b"), _rc_cross("c")]
+    # 注入假 scorer:给 pairs 打分,让 c>a>b
+    def fake_scorer(pairs):
+        # pairs = [(q, text), ...] 顺序同 candidates
+        return [0.2, 0.1, 0.9]                   # a,b,c
+    r = CrossEncoderReranker("dummy-model", scorer=fake_scorer)
+    out = r.rerank("q", cands, top_k=2)
+    assert [c.chunk.source for c in out] == ["c.md", "a.md"]   # 按分降序取 top2
+    assert out[0].score == 0.9
+
+
+def test_cross_encoder_empty():
+    from rag.rerank import CrossEncoderReranker
+    assert CrossEncoderReranker("m", scorer=lambda p: []).rerank("q", [], top_k=4) == []
+
+
+def test_build_reranker_cross_encoder_no_model_load():
+    from rag.rerank import build_reranker, CrossEncoderReranker
+    r = build_reranker("cross_encoder", llm=None, cross_encoder_model="BAAI/bge-reranker-v2-m3")
+    assert isinstance(r, CrossEncoderReranker)
+    assert r._model is None                      # 惰性:构造不加载模型

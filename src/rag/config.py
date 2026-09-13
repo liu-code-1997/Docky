@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     rerank: bool = False
     rerank_factor: int = 5
     rerank_provider: str = "llm_listwise"
+    rerank_cross_encoder_model: str = "BAAI/bge-reranker-v2-m3"
 
     # 检索参数(M2 使用)
     top_k: int = 4

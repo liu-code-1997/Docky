@@ -13,6 +13,7 @@ dependencies = [
     "pypdf>=4",                 # PDF 抽取
     "beautifulsoup4>=4.12",     # HTML 抽取
     "python-docx>=1.1",         # docx 抽取
+    "sentence-transformers>=3",   # M10 bge cross-encoder 重排(惰性加载)
 ]
 
 [project.optional-dependencies]

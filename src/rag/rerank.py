@@ -79,10 +79,38 @@ class ListwiseLlmReranker(Reranker):
         return ranked[:top_k]
 
 
-def build_reranker(provider: str, llm: LLM) -> Reranker:
+class CrossEncoderReranker(Reranker):
+    """bge 类 cross-encoder 重排。torch/sentence_transformers 惰性加载(首次 rerank 时)。"""
+
+    def __init__(self, model_name: str, scorer=None):
+        self.model_name = model_name
+        self._scorer = scorer          # callable(list[tuple[str,str]])->list[float];测试注入
+        self._model = None
+
+    def _score(self, pairs):
+        if self._scorer is not None:
+            return self._scorer(pairs)
+        if self._model is None:
+            from sentence_transformers import CrossEncoder
+            self._model = CrossEncoder(self.model_name)
+        return self._model.predict(pairs)
+
+    def rerank(self, question: str, candidates: list[RetrievedChunk],
+               top_k: int) -> list[RetrievedChunk]:
+        if not candidates:
+            return []
+        pairs = [(question, rc.chunk.text) for rc in candidates]
+        scores = self._score(pairs)
+        ranked = sorted(zip(scores, candidates), key=lambda t: t[0], reverse=True)
+        return [RetrievedChunk(chunk=rc.chunk, score=float(s)) for s, rc in ranked[:top_k]]
+
+
+def build_reranker(provider: str, llm: LLM, cross_encoder_model: str = "BAAI/bge-reranker-v2-m3") -> Reranker:
     """按名字构造重排器。将来接 bge cross-encoder 只需加一分支。"""
     if provider == "llm_listwise":
         return ListwiseLlmReranker(llm)
     if provider == "llm_pointwise":
         return LlmReranker(llm)
-    raise ValueError(f"未知 rerank_provider: {provider}(可选 llm_listwise | llm_pointwise)")
+    if provider == "cross_encoder":
+        return CrossEncoderReranker(cross_encoder_model)
+    raise ValueError(f"未知 rerank_provider: {provider}(可选 llm_listwise | llm_pointwise | cross_encoder)")
