@@ -22,7 +22,7 @@ from rag.generate import answer as generate_answer
 from rag.scoring import get_scorer
 from rag.evaluate import evaluate_sample, aggregate
 from rag.query_rewrite import LlmQueryRewriter
-from rag.rerank import LlmReranker
+from rag.rerank import build_reranker
 from rag.agent import RagAgent
 from rag.providers.chat_factory import build_chat_llm
 from rag.models import EvalSample
@@ -61,7 +61,7 @@ def main() -> None:
 
     # M5③:重排(命令行 --rerank 可覆盖 config)
     use_rerank = args.rerank if args.rerank is not None else settings.rerank
-    reranker = LlmReranker(llm) if use_rerank else None
+    reranker = build_reranker(settings.rerank_provider, llm) if use_rerank else None
 
     # M6:agent 模式 —— 用自主检索循环替代单轮 RAG
     agent = None

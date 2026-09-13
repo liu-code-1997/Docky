@@ -17,7 +17,7 @@ from rag.providers.ollama_llm import OllamaLLM
 from rag.providers.qdrant_store import QdrantStore
 from rag.pipeline import RagPipeline
 from rag.query_rewrite import LlmQueryRewriter
-from rag.rerank import LlmReranker
+from rag.rerank import build_reranker
 from rag.retrieve import retrieve
 from rag.agent import RagAgent
 from rag.providers.chat_factory import build_chat_llm
@@ -34,7 +34,7 @@ def build_app():
     store = QdrantStore(collection_name=settings.collection_name,
                         url=settings.qdrant_url)
     rewriter = LlmQueryRewriter(llm, profile.rewrite_prompt) if (settings.query_rewrite and profile.rewrite_prompt) else None
-    reranker = LlmReranker(llm) if settings.rerank else None
+    reranker = build_reranker(settings.rerank_provider, llm) if settings.rerank else None
     pipeline = RagPipeline(embedder, store, llm, top_k=settings.top_k,
                            rewriter=rewriter, reranker=reranker,
                            rerank_factor=settings.rerank_factor,

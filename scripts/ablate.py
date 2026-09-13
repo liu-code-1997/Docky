@@ -20,7 +20,7 @@ from rag.generate import answer as generate_answer
 from rag.scoring import get_scorer
 from rag.evaluate import evaluate_sample, aggregate
 from rag.query_rewrite import LlmQueryRewriter
-from rag.rerank import LlmReranker
+from rag.rerank import build_reranker
 from rag.ablate import format_comparison_table
 from rag.models import EvalSample
 
@@ -47,7 +47,7 @@ def main() -> None:
     for use_rewrite in (False, True):
         for use_rerank in (False, True):
             rewriter = LlmQueryRewriter(llm, profile.rewrite_prompt) if (use_rewrite and profile.rewrite_prompt) else None
-            reranker = LlmReranker(llm) if use_rerank else None
+            reranker = build_reranker(settings.rerank_provider, llm) if use_rerank else None
             rows = []
             for s in samples:
                 retrieved = retrieve(s.question, embedder, store,
