@@ -25,7 +25,10 @@ def load_chunks_from_dir(docs_dir: Path, chunk_size: int, overlap: int,
         library = rel.parts[0] if len(rel.parts) > 1 else "root"
         source = rel.as_posix()
 
-        text = extract_text(path)
+        try:
+            text = extract_text(path)
+        except Exception:
+            continue          # 坏/加密/损坏文件:跳过,不中断整批
         if not text.strip():
             continue
         if path.suffix.lower() == ".md" and strategy == "markdown":

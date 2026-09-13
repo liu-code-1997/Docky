@@ -19,7 +19,7 @@ def test_loads_markdown_and_builds_chunks(tmp_path: Path):
     assert len({c.id for c in chunks}) == len(chunks)
 
 
-def test_ignores_non_markdown_files(tmp_path: Path):
+def test_ignores_unsupported_suffixes(tmp_path: Path):
     lib = tmp_path / "fastapi"
     lib.mkdir()
     (lib / "a.md").write_text("hello world", encoding="utf-8")
@@ -69,3 +69,34 @@ def test_loader_handles_mixed_formats(tmp_path):
     assert {"lib/a.md", "lib/b.txt", "lib/c.html"} <= srcs
     assert all(c.library == "lib" for c in chunks)
     assert any("html body content" in c.text for c in chunks)
+
+
+def test_bad_file_does_not_abort_batch(tmp_path: Path, monkeypatch):
+    """Verify that a corrupt/encrypted file is skipped and doesn't abort the entire batch."""
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    (lib / "a.txt").write_text("good content a", encoding="utf-8")
+    (lib / "b.txt").write_text("good content b", encoding="utf-8")
+
+    # Monkeypatch extract_text to raise for b.txt but return text for a.txt
+    original_extract = None
+
+    def mock_extract_text(path):
+        if "b.txt" in str(path):
+            raise ValueError("Simulated corrupt/encrypted file")
+        return f"content from {path.name}"
+
+    import rag.loader
+    monkeypatch.setattr(rag.loader, "extract_text", mock_extract_text)
+
+    # Should not raise; should process a.txt and skip b.txt
+    chunks = load_chunks_from_dir(tmp_path, chunk_size=200, overlap=50)
+    srcs = {c.source for c in chunks}
+
+    # a.txt should be loaded
+    assert "lib/a.txt" in srcs
+    # b.txt should be skipped (no chunks from it)
+    assert "lib/b.txt" not in srcs
+    # At least one chunk from a.txt
+    assert len(chunks) >= 1
+    assert any("a.txt" in c.source for c in chunks)
