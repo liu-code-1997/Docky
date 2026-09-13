@@ -150,3 +150,27 @@ def test_retrieve_passes_hybrid_prefetch_factor_to_hybrid_search():
     st = _CapStore()
     retrieve("query", _Emb(), st, top_k=4, hybrid=True, hybrid_prefetch_factor=10)
     assert st.received_factor == 10  # 非默认值 10 被正确透传
+
+
+def test_retrieve_multi_query_calls_underlying_per_variant_and_fuses():
+    from rag.retrieve import retrieve
+    calls = []
+    class _Emb:
+        def embed_one(self, t): calls.append(t); return [0.0]
+    class _Store:
+        def search(self, qv, top_k, library=None):
+            return []
+    # expander 返回 2 个变体
+    retrieve("原问题", _Emb(), _Store(), top_k=4,
+             query_expander=lambda q: ["查询A", "查询B"])
+    assert len(calls) == 2                      # 每个变体各 embed 一次(各检索一次)
+
+def test_retrieve_no_expander_single_query_regression():
+    from rag.retrieve import retrieve
+    calls = []
+    class _Emb:
+        def embed_one(self, t): calls.append(t); return [0.0]
+    class _Store:
+        def search(self, qv, top_k, library=None): return []
+    retrieve("q", _Emb(), _Store(), top_k=4)     # 默认无 expander
+    assert len(calls) == 1                       # 单查询,与现状一致
