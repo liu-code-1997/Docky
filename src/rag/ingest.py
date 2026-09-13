@@ -3,6 +3,7 @@ from pathlib import Path
 from rag.interfaces import Embedder, VectorStore
 from rag.loader import load_chunks_from_dir
 from rag.chunking import _DEFAULT_NOISE_MARKERS
+from rag.sparse import encode_sparse
 
 
 def ingest_directory(docs_dir: Path, embedder: Embedder, store: VectorStore,
@@ -21,5 +22,6 @@ def ingest_directory(docs_dir: Path, embedder: Embedder, store: VectorStore,
 
     store.ensure_collection(vector_size=vector_size)
     vectors = embedder.embed([doc_prefix + c.text for c in chunks])
-    store.upsert(chunks, vectors)
+    sparse_vectors = [encode_sparse(c.text) for c in chunks]
+    store.upsert(chunks, vectors, sparse_vectors=sparse_vectors)
     return len(chunks)

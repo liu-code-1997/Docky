@@ -110,3 +110,21 @@ def test_ingest_prepends_doc_prefix(tmp_path: Path):
 
     assert n > 0
     assert all(t.startswith("search_document: ") for t in embedder.captured_texts)
+
+
+def test_ingest_passes_sparse_vectors_per_chunk():
+    import tempfile
+    captured = {}
+    class _Emb:
+        def embed(self, texts): return [[0.0] for _ in texts]
+        def embed_one(self, t): return [0.0]
+    class _Store:
+        def ensure_collection(self, vector_size): pass
+        def upsert(self, chunks, vectors, sparse_vectors=None):
+            captured["sparse"] = sparse_vectors; captured["n"] = len(chunks)
+    with tempfile.TemporaryDirectory() as d:
+        Path(d, "a.md").write_text("# T\nLEFT JOIN index\n", encoding="utf-8")
+        ingest_directory(Path(d), _Emb(), _Store(), chunk_size=800, overlap=0,
+                         vector_size=1)
+    assert captured["sparse"] is not None
+    assert len(captured["sparse"]) == captured["n"]     # 每 chunk 一个稀疏向量
