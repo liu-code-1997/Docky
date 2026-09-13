@@ -118,9 +118,8 @@ def main() -> None:
                                  hybrid=settings.hybrid,
                                  hybrid_prefetch_factor=settings.hybrid_prefetch_factor,
                                  query_expander=query_expander)
-            if settings.reorder_context:
-                retrieved = reorder_for_long_context(retrieved)
-            ans = generate_answer(s.question, retrieved, llm,
+            ctx = reorder_for_long_context(retrieved) if settings.reorder_context else retrieved
+            ans = generate_answer(s.question, ctx, llm,
                                   persona=profile.persona,
                                   refusal_text=profile.refusal_text,
                                   inline_citations=settings.inline_citations)
