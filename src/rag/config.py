@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     # ---- M12 多轮会话 ----
     # 保留历史回合数
     history_turns: int = 6
-    # 是否对长历史进行压缩(归纳摘要)
+    # 是否对追问做指代消解改写(condense-question);False 则直接用原问检索
     condense: bool = True
 
 

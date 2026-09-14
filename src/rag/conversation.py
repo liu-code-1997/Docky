@@ -22,7 +22,7 @@ class ConversationalRag:
         chunks = self.retriever(standalone, library)
         ans = generate_answer(question, chunks, self.llm,
                               persona=self.persona, refusal_text=self.refusal_text,
-                              history=history[-self.history_turns:])
+                              history=history[-2 * self.history_turns:])
         self.store.append(session_id, Message(role="user", content=question))
         self.store.append(session_id, Message(role="assistant", content=ans.text))
         return ans

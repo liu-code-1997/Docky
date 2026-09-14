@@ -17,8 +17,9 @@ def build_prompt(question: str, chunks: list[RetrievedChunk],
                  persona: str = _DEFAULT_PERSONA,
                  refusal_text: str = _DEFAULT_REFUSAL,
                  inline_citations: bool = False,
-                 history: list[Message] = []) -> str:
+                 history: list[Message] | None = None) -> str:
     """把 Top-K 资料与问题组装成给 LLM 的完整 prompt。"""
+    history = history or []
     cite_rule = (
         "\n4. 引用了哪段【资料】,就在该句末尾用其编号标注,如 [1]、[2]。"
         if inline_citations else ""
@@ -49,8 +50,9 @@ def answer(question: str, chunks: list[RetrievedChunk], llm: LLM,
            persona: str = _DEFAULT_PERSONA,
            refusal_text: str = _DEFAULT_REFUSAL,
            inline_citations: bool = False,
-           history: list[Message] = []) -> Answer:
+           history: list[Message] | None = None) -> Answer:
     """生成答案,并附上去重(保序)后的来源列表。"""
+    history = history or []
     prompt = build_prompt(question, chunks, persona, refusal_text, inline_citations, history)
     text = llm.generate(prompt)
 
