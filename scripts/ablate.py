@@ -55,7 +55,7 @@ def main() -> None:
     for use_rewrite in (False, True):
         for use_rerank in (False, True):
             rewriter = LlmQueryRewriter(llm, profile.rewrite_prompt) if (use_rewrite and profile.rewrite_prompt) else None
-            reranker = build_reranker(settings.rerank_provider, llm) if use_rerank else None
+            reranker = build_reranker(settings.rerank_provider, llm, settings.rerank_cross_encoder_model) if use_rerank else None
             rows = []
             for s in samples:
                 retrieved = retrieve(s.question, embedder, store,

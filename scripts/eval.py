@@ -63,7 +63,7 @@ def main() -> None:
 
     # M5③:重排(命令行 --rerank 可覆盖 config)
     use_rerank = args.rerank if args.rerank is not None else settings.rerank
-    reranker = build_reranker(settings.rerank_provider, llm) if use_rerank else None
+    reranker = build_reranker(settings.rerank_provider, llm, settings.rerank_cross_encoder_model) if use_rerank else None
 
     # M11:多查询扩展器(multi_query 开时)
     query_expander = (

@@ -35,7 +35,7 @@ def build_app():
     store = QdrantStore(collection_name=settings.collection_name,
                         url=settings.qdrant_url)
     rewriter = LlmQueryRewriter(llm, profile.rewrite_prompt) if (settings.query_rewrite and profile.rewrite_prompt) else None
-    reranker = build_reranker(settings.rerank_provider, llm) if settings.rerank else None
+    reranker = build_reranker(settings.rerank_provider, llm, settings.rerank_cross_encoder_model) if settings.rerank else None
     # M11:多查询扩展器(multi_query 开时)
     query_expander = (
         (lambda q: expand_queries(llm, q, settings.multi_query_n))
