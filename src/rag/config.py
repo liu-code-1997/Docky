@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     # agent 循环兜底上限
     agent_max_steps: int = 5
 
+    # ---- M12 多轮会话 ----
+    # 保留历史回合数
+    history_turns: int = 6
+    # 是否对追问做指代消解改写(condense-question);False 则直接用原问检索
+    condense: bool = True
+
 
 def get_settings() -> Settings:
     """返回一个 Settings 实例。集中在此,方便测试时替换。"""

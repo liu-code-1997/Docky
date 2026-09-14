@@ -93,3 +93,15 @@ class ChatLLM(ABC):
     def chat(self, messages: list[Message],
              tools: list[ToolSpec]) -> ChatResponse:
         """给定对话历史与可用工具,返回助手的下一回合。"""
+
+
+class SessionStore(ABC):
+    """多轮会话历史存储(M12)。"""
+
+    @abstractmethod
+    def get_history(self, session_id: str) -> list["Message"]:
+        """返回给定会话的消息历史。"""
+
+    @abstractmethod
+    def append(self, session_id: str, message: "Message") -> None:
+        """向会话追加一条消息。"""
