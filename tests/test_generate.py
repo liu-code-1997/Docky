@@ -1,5 +1,5 @@
 from rag.interfaces import LLM
-from rag.models import Chunk, RetrievedChunk
+from rag.models import Chunk, RetrievedChunk, Message
 from rag.generate import build_prompt, answer
 
 
@@ -90,3 +90,15 @@ def test_inline_citations_adds_instruction():
 def test_inline_citations_off_by_default():
     p = build_prompt("q", [_rc_simple()])
     assert "标注" not in p                     # 默认不加引用指令
+
+
+def test_build_prompt_includes_history_when_given():
+    hist = [Message(role="user", content="上一个问题"),
+            Message(role="assistant", content="上一个回答")]
+    p = build_prompt("现在的问题", [_rc_simple()], history=hist)
+    assert "上一个问题" in p and "上一个回答" in p
+
+
+def test_build_prompt_no_history_unchanged():
+    p = build_prompt("q", [_rc_simple()])
+    assert "对话历史" not in p           # 默认不插历史块

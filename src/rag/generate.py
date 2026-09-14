@@ -6,7 +6,7 @@
 - 带出处:答案附上去重后的来源文件列表。
 """
 from rag.interfaces import LLM
-from rag.models import Answer, RetrievedChunk
+from rag.models import Answer, RetrievedChunk, Message
 
 
 _DEFAULT_PERSONA = "你是一个严谨的技术文档问答助手"
@@ -16,7 +16,8 @@ _DEFAULT_REFUSAL = "根据现有资料无法回答"
 def build_prompt(question: str, chunks: list[RetrievedChunk],
                  persona: str = _DEFAULT_PERSONA,
                  refusal_text: str = _DEFAULT_REFUSAL,
-                 inline_citations: bool = False) -> str:
+                 inline_citations: bool = False,
+                 history: list[Message] = []) -> str:
     """把 Top-K 资料与问题组装成给 LLM 的完整 prompt。"""
     cite_rule = (
         "\n4. 引用了哪段【资料】,就在该句末尾用其编号标注,如 [1]、[2]。"
@@ -30,21 +31,27 @@ def build_prompt(question: str, chunks: list[RetrievedChunk],
         f"任何情况下都不要编造、不要用资料之外的常识补充。\n"
         f"3. 回答尽量简洁、准确,可引用资料中的术语。{cite_rule}"
     )
+    hist_block = ""
+    if history:
+        role = {"user": "用户", "assistant": "助手"}
+        lines = "\n".join(f"{role.get(m.role, m.role)}:{m.content}" for m in history)
+        hist_block = f"【对话历史】\n{lines}\n\n"
     if chunks:
         blocks = [f"[资料{i} | 来源:{rc.chunk.source}]\n{rc.chunk.text}"
                   for i, rc in enumerate(chunks, start=1)]
         context = "\n\n".join(blocks)
     else:
         context = "(无相关资料)"
-    return (f"{system}\n\n【资料】\n{context}\n\n【问题】\n{question}\n\n【回答】")
+    return (f"{system}\n\n{hist_block}【资料】\n{context}\n\n【问题】\n{question}\n\n【回答】")
 
 
 def answer(question: str, chunks: list[RetrievedChunk], llm: LLM,
            persona: str = _DEFAULT_PERSONA,
            refusal_text: str = _DEFAULT_REFUSAL,
-           inline_citations: bool = False) -> Answer:
+           inline_citations: bool = False,
+           history: list[Message] = []) -> Answer:
     """生成答案,并附上去重(保序)后的来源列表。"""
-    prompt = build_prompt(question, chunks, persona, refusal_text, inline_citations)
+    prompt = build_prompt(question, chunks, persona, refusal_text, inline_citations, history)
     text = llm.generate(prompt)
 
     sources: list[str] = []
