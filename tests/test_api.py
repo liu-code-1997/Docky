@@ -114,3 +114,35 @@ def test_agent_ask_503_when_agent_not_configured():
     client = _client(agent=None)
     resp = client.post("/agent/ask", json={"question": "q"})
     assert resp.status_code == 503
+
+
+def test_chat_endpoint_routes_to_conversation():
+    from fastapi.testclient import TestClient
+    from rag.api import create_app
+    from rag.models import Answer
+
+    class _FakeConv:
+        def __init__(self): self.calls = []
+        def chat(self, session_id, question, library=None):
+            self.calls.append((session_id, question))
+            return Answer(text=f"[{session_id}] {question}", sources=[])
+
+    class _FakeStore:      # VectorStore stub for /libraries,/health
+        def list_libraries(self): return ["fastapi"]
+
+    conv = _FakeConv()
+    app = create_app(pipeline=None, store=_FakeStore(), conversation=conv)
+    c = TestClient(app)
+    r = c.post("/chat", json={"session_id": "s1", "question": "hi"})
+    assert r.status_code == 200
+    assert r.json()["text"] == "[s1] hi"
+    assert conv.calls == [("s1", "hi")]
+
+
+def test_chat_503_when_not_configured():
+    from fastapi.testclient import TestClient
+    from rag.api import create_app
+    class _S:
+        def list_libraries(self): return []
+    c = TestClient(create_app(pipeline=None, store=_S()))
+    assert c.post("/chat", json={"session_id": "s", "question": "q"}).status_code == 503

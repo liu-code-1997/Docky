@@ -22,6 +22,8 @@ from rag.retrieve import retrieve
 from rag.multi_query import expand_queries
 from rag.agent import RagAgent
 from rag.providers.chat_factory import build_chat_llm
+from rag.conversation import ConversationalRag
+from rag.session_store import InMemorySessionStore
 from rag.api import create_app
 
 
@@ -67,7 +69,15 @@ def build_app():
                      top_k=settings.top_k, max_steps=settings.agent_max_steps,
                      persona=profile.persona, refusal_text=profile.refusal_text)
 
-    return create_app(pipeline, store, agent=agent)
+    # M12:装配多轮会话 —— 复用同一个 retriever 闭包(签名兼容)
+    store_sess = InMemorySessionStore()
+    conversation = ConversationalRag(
+        retriever, llm, store_sess,
+        profile.persona, profile.refusal_text,
+        settings.history_turns, settings.condense,
+    )
+
+    return create_app(pipeline, store, agent=agent, conversation=conversation)
 
 
 def main() -> None:

@@ -22,11 +22,24 @@ class AskRequest(BaseModel):
         return v.strip()
 
 
+class ChatRequest(BaseModel):
+    session_id: str
+    question: str
+    library: str | None = None
+
+    @field_validator("question")
+    @classmethod
+    def question_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("question 不能为空")
+        return v.strip()
+
+
 class LibrariesResponse(BaseModel):
     libraries: list[str]
 
 
-def create_app(pipeline, store, agent=None) -> FastAPI:
+def create_app(pipeline, store, agent=None, conversation=None) -> FastAPI:
     app = FastAPI(title="Docky", description="Docky · 面向学习的技术文档 RAG 问答小助手")
 
     @app.post("/ask", response_model=Answer)
@@ -39,6 +52,13 @@ def create_app(pipeline, store, agent=None) -> FastAPI:
         if agent is None:
             raise HTTPException(status_code=503, detail="agent 未配置")
         return agent.ask(req.question, library=req.library)
+
+    @app.post("/chat", response_model=Answer)
+    def chat(req: ChatRequest) -> Answer:
+        # M12:多轮会话。未配置 conversation 时返回 503(而非崩溃)。
+        if conversation is None:
+            raise HTTPException(status_code=503, detail="conversation 未配置")
+        return conversation.chat(req.session_id, req.question, library=req.library)
 
     @app.get("/libraries", response_model=LibrariesResponse)
     def libraries() -> LibrariesResponse:
